@@ -51,7 +51,7 @@ test('rewriting across note boundaries preserves new text without stale pins', (
   assert.deepEqual(cleared, { note: '', stickyNotes: [] })
 })
 
-test('older photos need no metadata and positions stay within the photo', () => {
+test('older photos need no metadata and positions stay within the review area', () => {
   assert.deepEqual(changePhotoNote({ note: 'Old note' }, 'New note'), { note: 'New note', stickyNotes: [] })
   const result = appendStickyNote({ note: '' }, 'Pinned', { x: -3, y: 8 }, 'a')
   assert.equal(result.stickyNotes[0].x, 0)

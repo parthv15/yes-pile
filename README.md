@@ -28,7 +28,7 @@ Use **Choose photos** to import from your photo library. On phones, the tabs sit
 | `↓` or `M` | Maybe: skip for now (or Next on a photo you've already decided) |
 | `↑` or `B` | Back to the previous photo |
 | `Z` or `Backspace` | Undo |
-| `N` | Place a text note on the photo |
+| `N` | Place a text note anywhere in the review area |
 | `F` | Full screen (click the photo there to see it at actual size; `Esc` to close) |
 | `1`–`9` | Put the photo in that group |
 
@@ -47,6 +47,6 @@ React + Vite + TypeScript, Tailwind CSS, and Dexie for storage. Every push to `m
 
 ### Sticky notes during review
 
-Choose **Note** in the top action bar (or press **N**), then tap or click a spot on the photo. Enter plain text and save. Drag the note's grip to move it; tap its text to edit or delete it. Notes stay with their photo through the carousel, later rounds, and reloads. Positions scale with the photo on phones and in full screen.
+Choose **Note** in the top action bar (or press **N**), then tap or click anywhere in the review area below the top action bar, including the space beside the photo. Enter plain text and save. Drag the note's grip to move it; tap its text to edit or delete it. Notes stay with their photo through the carousel, later rounds, and reloads. Positions scale with the review area on phones and in full screen. Only the current photo’s notes are shown, and moving them never changes which photo they belong to. Existing saved positions use the same relative coordinates across the expanded area.
 
 Each sticky's text is appended to the existing **Notes** field and included in ZIP exports. Editing a sticky updates that same text. Editing within its text in the ordinary Notes field also updates the sticky; rewriting across a sticky's boundary removes that pin while preserving the edited text in Notes. Existing notes and photos do not need a migration.
