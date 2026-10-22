@@ -47,7 +47,7 @@ export default function App() {
 
   return (
     <div
-      className="flex h-full flex-col"
+      className="app-shell flex flex-col"
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes('Files')) return
         e.preventDefault()
@@ -63,31 +63,32 @@ export default function App() {
         addFiles([...e.dataTransfer.files])
       }}
     >
-      <header className="flex items-center gap-8 border-b border-stone-200 bg-white px-8 py-4">
-        <h1 className="font-display text-2xl font-bold tracking-tight">
+      <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 bg-white px-4 py-3 sm:gap-8 sm:px-8 sm:py-4">
+        <h1 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
           Yes Pile ❤️
         </h1>
-        <nav className="flex gap-1">
+        <nav aria-label="Main navigation" className="app-nav flex gap-1">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              aria-current={current === t.id ? 'page' : undefined}
+              className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center rounded-2xl px-1 py-2 text-xs whitespace-nowrap font-medium transition sm:block sm:min-h-0 sm:flex-none sm:rounded-full sm:px-4 sm:text-sm ${
                 current === t.id ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'
               }`}
             >
               {t.label}
-              <span className={`ml-2 text-xs ${current === t.id ? 'text-stone-300' : 'text-stone-400'}`}>
+              <span className={`text-[10px] sm:ml-2 sm:text-xs ${current === t.id ? 'text-stone-300' : 'text-stone-400'}`}>
                 {t.count}
               </span>
             </button>
           ))}
         </nav>
         {importing && (
-          <div className="ml-auto flex items-center gap-3 text-sm text-stone-600">
+          <div className="flex w-full items-center gap-3 text-xs text-stone-600 sm:ml-auto sm:w-auto sm:text-sm">
             {importing.added === undefined ? (
               <>
-                <div className="h-1.5 w-40 overflow-hidden rounded-full bg-stone-200">
+                <div className="h-1.5 w-24 overflow-hidden rounded-full bg-stone-200">
                   <div
                     className="h-full bg-rose-500 transition-all"
                     style={{ width: `${(importing.done / importing.total) * 100}%` }}
@@ -103,7 +104,7 @@ export default function App() {
                     · {importing.failed.length} couldn't be read
                   </span>
                 )}
-                <button onClick={() => setImporting(null)} className="text-stone-400 hover:text-stone-700">
+                <button onClick={() => setImporting(null)} aria-label="Dismiss import status" className="flex h-11 w-11 items-center justify-center text-stone-400 hover:text-stone-700">
                   ✕
                 </button>
               </>
@@ -112,7 +113,7 @@ export default function App() {
         )}
       </header>
 
-      <main className="min-h-0 flex-1">
+      <main className="min-h-0 flex-1 overflow-y-auto">
         {current === 'add' && <AddView photos={photos} onFiles={addFiles} goTo={setTab} />}
         {current === 'review' && <ReviewView photos={photos} groups={groups} round={round} goTo={setTab} />}
         {current === 'pile' && <PileView photos={photos} groups={groups} round={round} />}
@@ -121,7 +122,7 @@ export default function App() {
 
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-rose-500/10 backdrop-blur-sm">
-          <div className="rounded-3xl border-2 border-dashed border-rose-400 bg-white/90 px-16 py-12 font-display text-3xl text-rose-600">
+          <div className="rounded-3xl border-2 border-dashed border-rose-400 bg-white/90 mx-4 px-6 py-10 text-center font-display text-2xl sm:px-16 sm:py-12 sm:text-3xl text-rose-600">
             Drop to add photos
           </div>
         </div>

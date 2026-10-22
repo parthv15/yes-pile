@@ -92,7 +92,8 @@ export default function Lightbox({ src, alt, onClose }: Props) {
           e.stopPropagation()
           onClose()
         }}
-        className="fixed top-4 right-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/25"
+        aria-label="Close full screen"
+        className="fixed top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/25"
         title="Close (Esc)"
       >
         ✕

@@ -51,8 +51,9 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
   const suggestions = labels.filter((l) => !photo.labels.includes(l))
 
   return (
-    <div className="fixed inset-0 z-40 flex bg-stone-950/85 backdrop-blur" onClick={onClose}>
-      <div className="relative flex min-w-0 flex-1 items-center justify-center p-10">
+    <div role="dialog" aria-modal="true" aria-label={`Photo details for ${photo.name}`}
+      className="photo-modal fixed inset-0 z-40 flex flex-col overflow-y-auto bg-stone-950/85 backdrop-blur md:flex-row md:overflow-hidden" onClick={onClose}>
+      <div className="relative flex h-[42dvh] min-h-52 min-w-0 shrink-0 items-center justify-center p-4 md:h-auto md:min-h-0 md:flex-1 md:p-10">
         <img
           src={photoUrl(photo, 'full')}
           alt={photo.name}
@@ -76,14 +77,14 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
       </div>
 
       <aside
-        className="flex w-96 shrink-0 flex-col gap-6 overflow-y-auto bg-white p-6"
+        className="photo-details flex w-full shrink-0 flex-col gap-5 bg-white p-5 md:w-96 md:gap-6 md:overflow-y-auto md:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
-          <p className="truncate text-sm text-stone-500" title={photo.name}>
+          <p className="min-w-0 truncate text-sm text-stone-500" title={photo.name}>
             {photo.name}
           </p>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-900">
+          <button onClick={onClose} aria-label="Close photo details" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-stone-500 hover:bg-stone-100">
             ✕
           </button>
         </div>
@@ -114,7 +115,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
               <button
                 key={g.id}
                 onClick={() => toggleGroup(photo, g.id)}
-                className="rounded-full border px-3 py-1 text-sm"
+                className="min-h-11 max-w-full break-words rounded-full border px-3 py-1 text-sm"
                 style={
                   photo.groupIds.includes(g.id)
                     ? { background: g.color, borderColor: g.color, color: 'white' }
@@ -186,7 +187,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
           />
         </section>
 
-        <div className="mt-auto flex gap-2 border-t border-stone-200 pt-4 text-sm">
+        <div className="mt-auto flex flex-wrap gap-2 border-t border-stone-200 pt-4 text-sm">
           {photo.out ? (
             <button onClick={() => update({ out: false, outRound: 0 })} className="rounded-full border border-stone-300 px-4 py-2 hover:bg-stone-100">
               Bring back
@@ -224,6 +225,7 @@ function NavButton({ side, onClick, children }: { side: 'left' | 'right'; onClic
         e.stopPropagation()
         onClick()
       }}
+      aria-label={side === 'left' ? 'Previous photo' : 'Next photo'}
       className={`absolute top-1/2 ${side === 'left' ? 'left-4' : 'right-4'} flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/25`}
     >
       {children}

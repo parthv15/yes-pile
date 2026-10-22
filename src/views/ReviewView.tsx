@@ -131,7 +131,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     return (
       <Centered>
         <p className="text-sm font-medium uppercase tracking-widest text-rose-500">Round {round} done</p>
-        <p className="mt-3 font-display text-4xl">
+        <p className="mt-3 font-display text-3xl sm:text-4xl">
           {stillIn === 0
             ? 'Nothing left in the running'
             : stillIn === 1
@@ -144,7 +144,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           {stillIn === 1 && ' Open it in Liked and crown it THE ONE.'}
           {stillIn === 0 && ' Passed photos can be brought back from the Liked tab.'}
         </p>
-        <div className="mt-8 flex gap-3">
+        <div className="mt-6 flex flex-wrap justify-center gap-3 sm:mt-8">
           {stillIn > 1 && (
             <button
               onClick={() => setRound(round + 1)}
@@ -158,7 +158,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           </button>
           {list.length > 0 && (
             <button onClick={back} className="rounded-full px-6 py-3 font-medium text-stone-500 hover:bg-stone-100">
-              ↑ Back to last photo
+              <span className="hidden sm:inline">↑&nbsp;</span>Back to last photo
             </button>
           )}
         </div>
@@ -170,8 +170,8 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
   const liked = !photo.out && photo.level >= round
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-4 px-8 pt-4 text-sm text-stone-500">
+    <div className="review-view flex h-full flex-col">
+      <div className="review-progress flex items-center gap-2 px-4 pt-3 text-xs sm:gap-4 sm:px-8 sm:pt-4 sm:text-sm text-stone-500">
         <span className="font-medium text-stone-900">Round {round}</span>
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200">
           <div className="h-full bg-stone-900 transition-all" style={{ width: `${(done / progress.total) * 100}%` }} />
@@ -182,7 +182,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         <span className="text-rose-600">❤️ {progress.liked}</span>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center p-6">
+      <div className="review-photo relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3 sm:p-6">
         <img
           key={photo.id}
           src={photoUrl(photo, 'full')}
@@ -202,7 +202,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         {upcoming && <link rel="preload" as="image" href={photoUrl(upcoming, 'full')} />}
         {!undecided && (
           <span
-            className={`absolute top-8 left-8 rounded-full px-3 py-1 text-sm font-medium shadow ${
+            className={`absolute top-4 left-4 sm:top-8 sm:left-8 rounded-full px-3 py-1 text-sm font-medium shadow ${
               liked ? 'bg-stone-900 text-white' : 'bg-white text-stone-600'
             }`}
           >
@@ -210,7 +210,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           </span>
         )}
         {(photoGroups.length > 0 || photo.labels.length > 0) && (
-          <div className="absolute top-8 left-1/2 flex -translate-x-1/2 gap-2">
+          <div className="absolute bottom-4 left-1/2 flex max-w-[90%] -translate-x-1/2 flex-wrap justify-center gap-1 sm:top-8 sm:bottom-auto sm:gap-2">
             {photoGroups.map((g) => (
               <span key={g.id} className="rounded-full px-3 py-1 text-sm font-medium text-white" style={{ background: g.color }}>
                 {g.name}
@@ -225,62 +225,62 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         )}
       </div>
 
-      <div className="flex items-center justify-center gap-3 pb-2">
+      <div className="review-controls grid grid-cols-4 items-center gap-2 px-3 pb-2 sm:flex sm:justify-center sm:gap-3 sm:px-0">
         <button
           onClick={back}
           disabled={index <= 0}
-          className="flex w-28 items-center justify-center rounded-full py-4 font-medium text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+          className="flex min-h-12 items-center justify-center rounded-full py-3 text-sm sm:w-28 sm:py-4 sm:text-base font-medium text-stone-600 hover:bg-stone-100 disabled:opacity-30"
         >
-          ↑ Back
+          <span className="hidden sm:inline">↑&nbsp;</span>Back
         </button>
         <button
           onClick={() => decide('pass')}
-          className={`flex w-36 items-center justify-center rounded-full border py-4 text-lg font-medium ${
+          className={`flex min-h-12 items-center justify-center rounded-full border py-3 text-sm sm:w-36 sm:py-4 sm:text-lg font-medium ${
             photo.out ? 'border-stone-900 bg-stone-200' : 'border-stone-300 bg-white hover:bg-stone-100'
           }`}
         >
-          ← Pass
+          <span className="hidden sm:inline">←&nbsp;</span>Pass
         </button>
         <button
           onClick={next}
-          className="flex w-36 items-center justify-center rounded-full border border-stone-300 bg-white py-4 text-lg font-medium hover:bg-stone-100"
+          className="flex min-h-12 items-center justify-center rounded-full border border-stone-300 bg-white py-3 text-sm sm:w-36 sm:py-4 sm:text-lg font-medium hover:bg-stone-100"
         >
-          {undecided ? 'Maybe ↓' : 'Next ↓'}
+          {undecided ? 'Maybe' : 'Next'}<span className="hidden sm:inline">&nbsp;↓</span>
         </button>
         <button
           onClick={() => decide('like')}
-          className={`flex w-36 items-center justify-center rounded-full py-4 text-lg font-medium text-white ${
+          className={`flex min-h-12 items-center justify-center rounded-full py-3 text-sm sm:w-36 sm:py-4 sm:text-lg font-medium text-white ${
             liked ? 'bg-rose-600 ring-4 ring-rose-200' : 'bg-stone-900 hover:bg-stone-700'
           }`}
         >
-          ❤️ Like →
+          ❤️ Like<span className="hidden sm:inline">&nbsp;→</span>
         </button>
       </div>
-      <p className="pb-4 text-center text-xs text-stone-400">
-        ← pass · → like · ↓ maybe / next · ↑ back · F full screen ·{' '}
-        <button onClick={undo} disabled={!history.length} className="underline disabled:no-underline disabled:opacity-50">
-          Z undo
+      <p className="review-hints pb-2 text-center text-xs text-stone-500 sm:pb-4">
+        <span className="hidden sm:inline">← pass · → like · ↓ maybe / next · ↑ back · F full screen · </span>
+        <button onClick={undo} disabled={!history.length} className="min-h-11 px-3 underline disabled:no-underline disabled:opacity-50">
+          <span className="hidden sm:inline">Z </span>Undo
         </button>
       </p>
 
-      <div className="flex flex-wrap items-center justify-center gap-2 border-t border-stone-200 bg-white px-8 py-3 text-sm">
+      <div className="review-groups flex shrink-0 items-center gap-2 overflow-x-auto border-t border-stone-200 bg-white px-3 py-2 text-sm sm:flex-wrap sm:justify-center sm:px-8 sm:py-3">
         <span className="text-stone-400">Group:</span>
         {groups.slice(0, 9).map((g, i) => (
           <button
             key={g.id}
             onClick={() => toggle(g)}
-            className="flex items-center gap-2 rounded-full border px-3 py-1"
+            className="flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-3 py-1"
             style={
               photo.groupIds.includes(g.id)
                 ? { background: g.color, borderColor: g.color, color: 'white' }
                 : { borderColor: '#e7e5e4' }
             }
           >
-            <kbd className="text-xs opacity-60">{i + 1}</kbd>
+            <kbd className="hidden text-xs opacity-60 sm:inline">{i + 1}</kbd>
             {g.name}
           </button>
         ))}
-        <button onClick={newGroup} className="rounded-full px-3 py-1 text-stone-500 hover:bg-stone-100">
+        <button onClick={newGroup} className="min-h-11 shrink-0 rounded-full px-3 py-1 text-stone-500 hover:bg-stone-100">
           + New group
         </button>
       </div>
@@ -291,5 +291,5 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
-  return <div className="flex h-full flex-col items-center justify-center px-8 text-center">{children}</div>
+  return <div className="flex min-h-full flex-col items-center justify-center px-4 py-6 text-center sm:px-8">{children}</div>
 }
