@@ -9,10 +9,11 @@ Built for sorting through wedding vendor photos, but it works for any pile of pi
 ## How it works
 
 1. **Add photos.** Drop them anywhere on the page, or choose files or a whole folder.
-2. **Review in rounds.** Like or pass on each photo. When a round is done, start the next one with only the photos you liked. Repeat until you're down to a few.
-3. **Group and label.** In **Liked**, sort photos into groups. A photo can be in several groups at once; it's still one photo, so liking, labelling or picking it shows everywhere. Drag a photo onto a group to add it there, or select several and use **Groups…**. Add labels and notes too.
-4. **Decide.** Open a photo and choose **THE ONE!** or **Add to Yes Pile**.
-5. **Keep it.** The **Yes Pile** tab shows THE ONE and everything else you said yes to. Download it all as a zip.
+2. **Review in rounds.** Like or pass on each photo. The photos before and after it peek in from the sides; click one to step to it. When a round is done, start the next one with only the photos you liked. Repeat until you're down to a few.
+3. **Look again at what you passed.** The **Passed** tab shows every photo you passed on, round by round. Bring any back and it rejoins your liked photos.
+4. **Group and label.** In **Liked**, sort photos into groups. A photo can be in several groups at once; it's still one photo, so liking, labelling or picking it shows everywhere. Drag a photo onto a group to add it there, or select several and use **Groups…**. Add labels and notes too.
+5. **Decide.** Open a photo and choose **THE ONE!** or **Add to Yes Pile**.
+6. **Keep it.** The **Yes Pile** tab shows THE ONE and everything else you said yes to. Download it all as a zip.
 
 ### On a phone or tablet
 

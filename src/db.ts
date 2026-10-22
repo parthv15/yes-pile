@@ -135,6 +135,29 @@ export function allLabels(photos: Photo[]) {
   return [...new Set(photos.flatMap((p) => p.labels))].sort((a, b) => a.localeCompare(b))
 }
 
+/** Photos passed on, most recent round first. */
+export function passedPhotos(photos: Photo[]) {
+  return photos.filter((p) => p.out).sort((a, b) => b.outRound - a.outRound || a.addedAt - b.addedAt)
+}
+
+/** Pass on photos outside of review, e.g. from Liked. They count as passed in the current round. */
+export async function passPhotos(ids: number[]) {
+  const outRound = await getRound()
+  await db.photos.where('id').anyOf(ids).modify({ out: true, outRound, yes: false, theOne: false })
+}
+
+/** Change your mind about passed photos: they count as liked in the round you passed them in. */
+export async function bringBack(ids: number[]) {
+  await db.photos
+    .where('id')
+    .anyOf(ids)
+    .modify((p) => {
+      p.level = Math.max(p.level, p.outRound)
+      p.out = false
+      p.outRound = 0
+    })
+}
+
 export async function makeTheOne(id: number) {
   await db.transaction('rw', db.photos, async () => {
     await db.photos.filter((p) => p.theOne).modify({ theOne: false, yes: true })

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Lightbox from './Lightbox'
-import { addToGroup, createGroup, db, toggleGroup, deletePhotos, makeTheOne, photoUrl, type Group, type Photo } from '../db'
+import { addToGroup, bringBack, createGroup, db, toggleGroup, deletePhotos, makeTheOne, passPhotos, photoUrl, type Group, type Photo } from '../db'
 
 interface Props {
   photo: Photo
@@ -189,12 +189,12 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
 
         <div className="mt-auto flex flex-wrap gap-2 border-t border-stone-200 pt-4 text-sm">
           {photo.out ? (
-            <button onClick={() => update({ out: false, outRound: 0 })} className="rounded-full border border-stone-300 px-4 py-2 hover:bg-stone-100">
+            <button onClick={() => bringBack([photo.id])} className="rounded-full border border-stone-300 px-4 py-2 hover:bg-stone-100">
               Bring back
             </button>
           ) : (
             <button
-              onClick={() => update({ out: true, yes: false, theOne: false })}
+              onClick={() => passPhotos([photo.id])}
               className="rounded-full border border-stone-300 px-4 py-2 hover:bg-stone-100"
             >
               Pass on this one

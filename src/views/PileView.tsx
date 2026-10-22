@@ -7,6 +7,7 @@ import {
   deletePhotos,
   groupsOf,
   likedPhotos,
+  passPhotos,
   removeFromGroup,
   type Group,
   type Photo,
@@ -24,7 +25,6 @@ const UNGROUPED = -1
 
 export default function PileView({ photos, groups }: Props) {
   const [labelFilter, setLabelFilter] = useState<string | null>(null)
-  const [showPassed, setShowPassed] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [openId, setOpenId] = useState<number | null>(null)
   const [dropTarget, setDropTarget] = useState<number | null>(null)
@@ -34,14 +34,13 @@ export default function PileView({ photos, groups }: Props) {
   const liked = likedPhotos(photos)
     .filter((p) => !labelFilter || p.labels.includes(labelFilter))
     .sort((a, b) => Number(b.theOne) - Number(a.theOne) || Number(b.yes) - Number(a.yes) || b.level - a.level || a.addedAt - b.addedAt)
-  const passed = photos.filter((p) => p.out).sort((a, b) => b.outRound - a.outRound || a.addedAt - b.addedAt)
 
   const sections = [
     ...groups.map((g) => ({ id: g.id, group: g as Group | undefined, photos: liked.filter((p) => p.groupIds.includes(g.id)) })),
     { id: UNGROUPED, group: undefined, photos: liked.filter((p) => groupsOf(p, groups).length === 0) },
   ]
   // Order used for prev/next in the photo viewer. A photo in several groups appears once.
-  const ordered = [...new Set([...sections.flatMap((s) => s.photos), ...(showPassed ? passed : [])])]
+  const ordered = [...new Set(sections.flatMap((s) => s.photos))]
   const openIndex = ordered.findIndex((p) => p.id === openId)
   const openPhoto = photos.find((p) => p.id === openId)
 
@@ -62,11 +61,6 @@ export default function PileView({ photos, groups }: Props) {
     if (!confirm(`Delete ${selected.size} photo${selected.size === 1 ? '' : 's'} for good?`)) return
     await deletePhotos([...selected])
     setSelected(new Set())
-  }
-
-  async function deletePassed() {
-    if (!confirm(`Delete all ${passed.length} passed photos for good? You won't be able to bring them back.`)) return
-    await deletePhotos(passed.map((p) => p.id))
   }
 
   async function bulkAddLabel() {
@@ -132,7 +126,7 @@ export default function PileView({ photos, groups }: Props) {
     }
   }
 
-  if (liked.length === 0 && passed.length === 0 && !labelFilter) {
+  if (liked.length === 0 && !labelFilter) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-center">
         <p className="font-display text-3xl">No liked photos yet</p>
@@ -205,7 +199,7 @@ export default function PileView({ photos, groups }: Props) {
               Add to Yes Pile
             </button>
             <button
-              onClick={() => bulk({ out: true, yes: false, theOne: false })}
+              onClick={() => passPhotos([...selected]).then(() => setSelected(new Set()))}
               className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm hover:bg-stone-100"
             >
               Pass
@@ -292,26 +286,6 @@ export default function PileView({ photos, groups }: Props) {
             </section>
           )
         })}
-
-        {passed.length > 0 && (
-          <section className="border-t border-stone-200 pt-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <button onClick={() => setShowPassed(!showPassed)} className="text-sm text-stone-500 hover:text-stone-900">
-                {showPassed ? '▾' : '▸'} Passed ({passed.length}) — bring any back if you change your mind
-              </button>
-              <button onClick={deletePassed} className="text-sm text-rose-600 hover:text-rose-700">
-                Delete all passed
-              </button>
-            </div>
-            {showPassed && (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
-                {passed.map((p) => (
-                  <PhotoCard key={p.id} photo={p} groups={groupsOf(p, groups)} onOpen={() => setOpenId(p.id)} dimmed />
-                ))}
-              </div>
-            )}
-          </section>
-        )}
       </div>
 
       {openPhoto && (
