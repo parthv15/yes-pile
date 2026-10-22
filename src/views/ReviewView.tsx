@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createGroup, db, isUndecided, photoUrl, roundPhotos, setRound, type Group, type Photo } from '../db'
 import type { Tab } from '../App'
+import Lightbox from '../components/Lightbox'
 
 interface Props {
   photos: Photo[]
@@ -16,6 +17,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
   const [currentId, setCurrentId] = useState<number | null>(null)
   const [history, setHistory] = useState<Snapshot[]>([])
   const [flash, setFlash] = useState<'like' | 'pass' | 'maybe' | null>(null)
+  const [fullscreen, setFullscreen] = useState(false)
   const busy = useRef(false)
 
   // Show the chosen photo, or else the first one still undecided.
@@ -106,6 +108,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
       else if (e.key === 'ArrowDown' || e.key === 'm' || e.key === 'n') next()
       else if (e.key === 'ArrowUp' || e.key === 'b') back()
       else if (e.key === 'z' || e.key === 'Backspace') undo()
+      else if (e.key === 'f' && photo) setFullscreen(true)
       else if (/^[1-9]$/.test(e.key) && groups[Number(e.key) - 1]) toggleGroup(groups[Number(e.key) - 1])
       else return
       e.preventDefault()
@@ -186,7 +189,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           key={photo.id}
           src={photoUrl(photo, 'full')}
           alt={photo.name}
-          className={`max-h-full max-w-full rounded-2xl object-contain shadow-xl transition duration-200 ${
+          onClick={() => setFullscreen(true)}
+          title="Full screen (F)"
+          className={`max-h-full max-w-full cursor-zoom-in rounded-2xl object-contain shadow-xl transition duration-200 ${
             flash === 'like'
               ? 'translate-x-6 opacity-60'
               : flash === 'pass'
@@ -254,7 +259,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         </button>
       </div>
       <p className="pb-4 text-center text-xs text-stone-400">
-        ← pass · → like · ↓ maybe / next · ↑ back ·{' '}
+        ← pass · → like · ↓ maybe / next · ↑ back · F full screen ·{' '}
         <button onClick={undo} disabled={!history.length} className="underline disabled:no-underline disabled:opacity-50">
           Z undo
         </button>
@@ -281,6 +286,8 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           + New group
         </button>
       </div>
+
+      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} onClose={() => setFullscreen(false)} />}
     </div>
   )
 }

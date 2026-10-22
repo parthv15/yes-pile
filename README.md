@@ -20,7 +20,10 @@ Built for sorting through wedding vendor photos, but it works for any pile of pi
 | --- | --- |
 | `→` or `L` | Like |
 | `←` or `P` | Pass |
+| `↓` or `M` | Maybe: skip for now (or Next on a photo you've already decided) |
+| `↑` or `B` | Back to the previous photo |
 | `Z` or `Backspace` | Undo |
+| `F` | Full screen (click the photo there to see it at actual size; `Esc` to close) |
 | `1`–`9` | Put the photo in that group |
 
 ## Where your photos live

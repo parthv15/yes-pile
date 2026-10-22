@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Lightbox from './Lightbox'
 import { createGroup, db, deletePhotos, makeTheOne, photoUrl, type Group, type Photo } from '../db'
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onNext }: Props) {
   const [labelDraft, setLabelDraft] = useState('')
   const [note, setNote] = useState(photo.note)
+  const [fullscreen, setFullscreen] = useState(false)
 
   useEffect(() => setNote(photo.note), [photo.id, photo.note])
 
@@ -23,6 +25,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
         return
       }
       if (e.key === 'Escape') onClose()
+      else if (e.key === 'f') setFullscreen(true)
       else if (e.key === 'ArrowLeft') onPrev?.()
       else if (e.key === 'ArrowRight') onNext?.()
       else return
@@ -53,8 +56,12 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
         <img
           src={photoUrl(photo, 'full')}
           alt={photo.name}
-          className="max-h-full max-w-full rounded-xl object-contain shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
+          className="max-h-full max-w-full cursor-zoom-in rounded-xl object-contain shadow-2xl"
+          title="Full screen (F)"
+          onClick={(e) => {
+            e.stopPropagation()
+            setFullscreen(true)
+          }}
         />
         {onPrev && (
           <NavButton side="left" onClick={onPrev}>
@@ -204,6 +211,8 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
           </button>
         </div>
       </aside>
+
+      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} onClose={() => setFullscreen(false)} />}
     </div>
   )
 }
