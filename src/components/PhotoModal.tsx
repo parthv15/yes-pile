@@ -88,7 +88,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
               photo.theOne ? 'bg-rose-500 text-white' : 'border-2 border-rose-500 text-rose-600 hover:bg-rose-50'
             }`}
           >
-            {photo.theOne ? '♥ THE ONE ♥' : 'THE ONE!'}
+            {photo.theOne ? '❤️ THE ONE ❤️' : 'THE ONE!'}
           </button>
           <button
             onClick={() => update({ yes: !photo.yes, out: false })}

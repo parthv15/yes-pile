@@ -131,7 +131,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         <span>
           {done} / {progress.total}
         </span>
-        <span className="text-rose-600">♥ {progress.liked}</span>
+        <span className="text-rose-600">❤️ {progress.liked}</span>
       </div>
 
       <div className="relative flex min-h-0 flex-1 items-center justify-center p-6">
@@ -176,9 +176,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         </button>
         <button
           onClick={() => decide('like')}
-          className="flex w-40 items-center justify-center gap-2 rounded-full bg-rose-500 py-4 text-lg font-medium text-white hover:bg-rose-600"
+          className="flex w-40 items-center justify-center gap-2 rounded-full bg-stone-900 py-4 text-lg font-medium text-white hover:bg-stone-700"
         >
-          ♥ Like →
+          ❤️ Like →
         </button>
       </div>
 

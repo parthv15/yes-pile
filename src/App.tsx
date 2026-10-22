@@ -65,7 +65,7 @@ export default function App() {
     >
       <header className="flex items-center gap-8 border-b border-stone-200 bg-white px-8 py-4">
         <h1 className="font-display text-2xl font-bold tracking-tight">
-          Yes Pile <span className="text-rose-500">♥</span>
+          Yes Pile ❤️
         </h1>
         <nav className="flex gap-1">
           {tabs.map((t) => (

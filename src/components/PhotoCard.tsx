@@ -48,7 +48,7 @@ export default function PhotoCard({ photo, group, selected, onOpen, onToggleSele
         )}
         {photo.level > 1 && (
           <span className="rounded-full bg-black/50 px-2 py-0.5 text-xs text-white" title={`Liked in ${photo.level} rounds`}>
-            ♥ {photo.level}
+            ❤️ {photo.level}
           </span>
         )}
       </div>

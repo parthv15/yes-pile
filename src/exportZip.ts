@@ -16,7 +16,7 @@ export async function exportYesPile(photos: Photo[], groups: Group[]) {
     const file = p.theOne ? `THE ONE - ${safe(p.name)}` : safe(p.name)
     zip.file(folder + file, p.blob)
     const details = [groupName(p), p.labels.join(', '), p.note].filter(Boolean).join(' | ')
-    notes.push(`${p.theOne ? '♥ THE ONE ♥  ' : ''}${folder}${file}${details ? `\n    ${details}` : ''}`)
+    notes.push(`${p.theOne ? '❤️ THE ONE ❤️  ' : ''}${folder}${file}${details ? `\n    ${details}` : ''}`)
   }
   zip.file('notes.txt', notes.join('\n\n'))
 
