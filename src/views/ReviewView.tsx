@@ -142,7 +142,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           {progress.liked} liked, {progress.passed} passed this round.
           {stillIn > 1 && ' Go again to narrow it down, or head to your liked photos to group, label and pick.'}
           {stillIn === 1 && ' Open it in Liked and crown it THE ONE.'}
-          {stillIn === 0 && ' Passed photos can be brought back from the Liked tab.'}
+          {stillIn === 0 && ' Passed photos can be brought back from the Passed tab.'}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3 sm:mt-8">
           {stillIn > 1 && (
@@ -156,6 +156,11 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           <button onClick={() => goTo('pile')} className="rounded-full border border-stone-300 px-6 py-3 font-medium hover:bg-stone-100">
             See liked photos
           </button>
+          {progress.passed > 0 && (
+            <button onClick={() => goTo('passed')} className="rounded-full border border-stone-300 px-6 py-3 font-medium hover:bg-stone-100">
+              See passed photos
+            </button>
+          )}
           {list.length > 0 && (
             <button onClick={back} className="rounded-full px-6 py-3 font-medium text-stone-500 hover:bg-stone-100">
               <span className="hidden sm:inline">↑&nbsp;</span>Back to last photo

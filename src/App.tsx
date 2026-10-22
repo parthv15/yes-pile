@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, getRound, likedPhotos, reviewQueue } from './db'
+import { db, getRound, likedPhotos, passedPhotos, reviewQueue } from './db'
 import { importPhotos } from './importPhotos'
 import AddView from './views/AddView'
 import ReviewView from './views/ReviewView'
 import PileView from './views/PileView'
+import PassedView from './views/PassedView'
 import YesView from './views/YesView'
 
-export type Tab = 'add' | 'review' | 'pile' | 'yes'
+export type Tab = 'add' | 'review' | 'pile' | 'passed' | 'yes'
 
 export interface ImportState {
   done: number
@@ -28,6 +29,7 @@ export default function App() {
 
   const queue = reviewQueue(photos, round)
   const liked = likedPhotos(photos)
+  const passed = passedPhotos(photos)
   const yesCount = photos.filter((p) => p.yes || p.theOne).length
   const current: Tab = tab ?? (photos.length === 0 ? 'add' : queue.length ? 'review' : 'pile')
 
@@ -42,6 +44,7 @@ export default function App() {
     { id: 'add', label: 'Add photos', count: String(photos.length) },
     { id: 'review', label: `Round ${round}`, count: queue.length ? `${queue.length} left` : 'done' },
     { id: 'pile', label: 'Liked', count: String(liked.length) },
+    { id: 'passed', label: 'Passed', count: String(passed.length) },
     { id: 'yes', label: 'Yes Pile', count: String(yesCount) },
   ]
 
@@ -117,6 +120,7 @@ export default function App() {
         {current === 'add' && <AddView photos={photos} onFiles={addFiles} goTo={setTab} />}
         {current === 'review' && <ReviewView photos={photos} groups={groups} round={round} goTo={setTab} />}
         {current === 'pile' && <PileView photos={photos} groups={groups} round={round} />}
+        {current === 'passed' && <PassedView photos={photos} groups={groups} goTo={setTab} />}
         {current === 'yes' && <YesView photos={photos} groups={groups} goTo={setTab} />}
       </main>
 
