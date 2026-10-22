@@ -111,11 +111,12 @@ button:focus-visible, a:focus-visible {
     display: grid;
     min-height: 18rem;
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
-    grid-template-areas: "progress progress" "photo controls" "photo hints" "groups groups";
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "progress progress" "toolbar toolbar" "photo controls";
   }
 
   .review-progress { grid-area: progress; }
+  .review-toolbar { grid-area: toolbar; margin-top: 0.5rem; }
   .review-photo { grid-area: photo; padding: 0.5rem; }
   .review-controls {
     grid-area: controls;
@@ -124,14 +125,9 @@ button:focus-visible, a:focus-visible {
     align-content: center;
     gap: 0.5rem;
     padding: 0.75rem;
+    border: 0;
+    background: transparent;
   }
   .review-controls button { width: auto; padding-block: 0.75rem; }
-  .review-hints { grid-area: hints; padding: 0; }
-  .review-hints > span { display: none; }
-  .review-groups {
-    grid-area: groups;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    padding: 0.5rem 1rem;
-  }
+  .review-hints { display: none; }
 }

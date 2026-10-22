@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { addToGroup, createGroup, db, groupsOf, isUndecided, photoUrl, roundPhotos, setRound, toggleGroup, type Group, type Photo } from '../db'
+import { addToGroup, createGroup, db, isUndecided, photoUrl, roundPhotos, setRound, toggleGroup, type Group, type Photo } from '../db'
 import type { Tab } from '../App'
 import Lightbox from '../components/Lightbox'
 import ReviewCarousel, { type Move, type MoveKind } from '../components/ReviewCarousel'
+import ScrollRow from '../components/ScrollRow'
 
 interface Props {
   photos: Photo[]
@@ -191,7 +192,6 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     )
   }
 
-  const photoGroups = groupsOf(photo, groups)
   // While the last card animates away, the buttons keep looking undecided.
   const liked = !finishing && !photo.out && photo.level >= round
   const passed = !finishing && photo.out
@@ -209,6 +209,69 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         <span className="text-rose-600">❤️ {progress.liked}</span>
       </div>
 
+      <div className="review-toolbar mt-3 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-y border-stone-200 bg-white px-3 py-2 text-sm sm:mt-4 sm:flex-nowrap sm:px-8">
+        <div className="flex min-h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden sm:max-w-[45%] sm:flex-none">
+          {photo.batchName && (
+            <span className="min-w-0 shrink truncate rounded-full bg-stone-100 px-3 py-1 font-medium text-stone-800" title={photo.batchName}>
+              <span className="font-normal text-stone-500">Upload: </span>
+              {photo.batchName}
+            </span>
+          )}
+          {!undecided && !finishing && (
+            <span
+              className={`shrink-0 rounded-full px-3 py-1 font-medium whitespace-nowrap ${
+                liked ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'
+              }`}
+            >
+              {liked ? '❤️ You liked this' : 'You passed on this'}
+            </span>
+          )}
+          {photo.labels.map((l) => (
+            <span key={l} className="hidden shrink-0 rounded-full border border-stone-200 px-3 py-1 whitespace-nowrap text-stone-600 sm:inline">
+              {l}
+            </span>
+          ))}
+        </div>
+        <button
+          onClick={undo}
+          disabled={!history.length}
+          title="Undo (Z)"
+          className="order-2 flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-stone-300 px-3 font-medium text-stone-700 hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-transparent sm:order-3"
+        >
+          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5.5 3 2.5 6l3 3" />
+            <path d="M2.5 6h7a4 4 0 0 1 0 8H7" />
+          </svg>
+          Undo
+          <kbd className="hidden text-xs font-normal text-stone-400 sm:inline">Z</kbd>
+        </button>
+        <div className="review-groups order-3 flex w-full items-center gap-2 sm:order-2 sm:w-auto sm:min-w-0 sm:flex-1 sm:justify-end">
+          <span className="shrink-0 text-stone-400">Group:</span>
+          {groups.length > 0 && (
+            <ScrollRow className="flex-1 gap-2 sm:flex-initial">
+              {groups.slice(0, 9).map((g, i) => (
+                <button
+                  key={g.id}
+                  onClick={() => toggle(g)}
+                  className="flex h-8 shrink-0 items-center gap-2 rounded-full border px-3 whitespace-nowrap"
+                  style={
+                    photo.groupIds.includes(g.id)
+                      ? { background: g.color, borderColor: g.color, color: 'white' }
+                      : { borderColor: '#e7e5e4' }
+                  }
+                >
+                  <kbd className="hidden text-xs opacity-60 sm:inline">{i + 1}</kbd>
+                  {g.name}
+                </button>
+              ))}
+            </ScrollRow>
+          )}
+          <button onClick={newGroup} className="h-8 shrink-0 rounded-full px-3 whitespace-nowrap text-stone-500 hover:bg-stone-100">
+            + New group
+          </button>
+        </div>
+      </div>
+
       <div className="review-photo relative min-h-0 flex-1 overflow-hidden">
         <ReviewCarousel
           prev={previous && !finishing ? { key: keyOf(previous), photo: previous } : undefined}
@@ -219,39 +282,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           onNext={next}
           onOpen={() => setFullscreen(true)}
         />
-        {!finishing && (!undecided || photo.batchName || photoGroups.length > 0 || photo.labels.length > 0) && (
-          <div className="pointer-events-none absolute top-6 left-1/2 z-10 flex max-w-[90%] -translate-x-1/2 flex-wrap justify-center gap-1 sm:top-10 sm:gap-2">
-            {photo.batchName && (
-              <div className="w-full text-center">
-                <span className="inline-block max-w-full truncate rounded-full bg-white/95 px-3 py-1 text-sm font-medium text-stone-800 shadow" title={photo.batchName}>
-                  <span className="font-normal text-stone-500">Upload: </span>{photo.batchName}
-                </span>
-              </div>
-            )}
-            {!undecided && (
-              <span
-                className={`rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap shadow ${
-                  liked ? 'bg-stone-900 text-white' : 'bg-white text-stone-600'
-                }`}
-              >
-                {liked ? '❤️ You liked this' : 'You passed on this'} · change it below
-              </span>
-            )}
-            {photoGroups.map((g) => (
-              <span key={g.id} className="rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap text-white shadow" style={{ background: g.color }}>
-                {g.name}
-              </span>
-            ))}
-            {photo.labels.map((l) => (
-              <span key={l} className="rounded-full bg-white/90 px-3 py-1 text-sm whitespace-nowrap shadow">
-                {l}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
-      <div className="review-controls grid grid-cols-4 items-center gap-2 px-3 pb-2 sm:flex sm:justify-center sm:gap-3 sm:px-0">
+      <div className="review-controls grid shrink-0 grid-cols-4 items-center gap-2 border-t border-stone-200 bg-white px-3 pt-3 pb-3 sm:flex sm:justify-center sm:gap-3 sm:px-0 sm:pb-1">
         <button
           onClick={back}
           disabled={!previous}
@@ -282,34 +315,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           ❤️ Like<span className="hidden sm:inline">&nbsp;→</span>
         </button>
       </div>
-      <p className="review-hints pb-2 text-center text-xs text-stone-500 sm:pb-4">
-        <span className="hidden sm:inline">← pass · → like · ↓ maybe / next · ↑ back · F full screen · </span>
-        <button onClick={undo} disabled={!history.length} className="min-h-11 px-3 underline disabled:no-underline disabled:opacity-50">
-          <span className="hidden sm:inline">Z </span>Undo
-        </button>
+      <p className="review-hints hidden shrink-0 bg-white pb-3 text-center text-xs text-stone-400 sm:block">
+        ← pass · → like · ↓ maybe / next · ↑ back · F full screen · Z undo
       </p>
-
-      <div className="review-groups flex shrink-0 items-center gap-2 overflow-x-auto border-t border-stone-200 bg-white px-3 py-2 text-sm sm:flex-wrap sm:justify-center sm:px-8 sm:py-3">
-        <span className="text-stone-400">Group:</span>
-        {groups.slice(0, 9).map((g, i) => (
-          <button
-            key={g.id}
-            onClick={() => toggle(g)}
-            className="flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-3 py-1"
-            style={
-              photo.groupIds.includes(g.id)
-                ? { background: g.color, borderColor: g.color, color: 'white' }
-                : { borderColor: '#e7e5e4' }
-            }
-          >
-            <kbd className="hidden text-xs opacity-60 sm:inline">{i + 1}</kbd>
-            {g.name}
-          </button>
-        ))}
-        <button onClick={newGroup} className="min-h-11 shrink-0 rounded-full px-3 py-1 text-stone-500 hover:bg-stone-100">
-          + New group
-        </button>
-      </div>
 
       {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} batchName={photo.batchName} onClose={() => setFullscreen(false)} />}
     </div>
