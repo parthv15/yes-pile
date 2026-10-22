@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import type { Photo } from '../db'
+import StickyNotes from './StickyNotes'
 
 interface Props {
   src: string
   alt: string
   batchName?: string
+  photo?: Photo
   onClose: () => void
 }
 
@@ -12,7 +15,7 @@ interface Props {
  * fitting the window and its actual size. Esc, F or the ✕ closes it.
  * Other keys pass through, so you can keep liking or flipping photos while it's open.
  */
-export default function Lightbox({ src, alt, batchName, onClose }: Props) {
+export default function Lightbox({ src, alt, batchName, photo, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [actualSize, setActualSize] = useState(false)
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null)
@@ -75,21 +78,24 @@ export default function Lightbox({ src, alt, batchName, onClose }: Props) {
         onClose()
       }}
     >
-      <img
-        src={src}
-        alt={alt}
-        onLoad={(e) => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-        style={actualSize || !natural ? undefined : { width: natural.w * scale, height: natural.h * scale }}
-        onClick={(e) => {
-          e.stopPropagation()
-          if (zoomable) setActualSize(!actualSize)
-        }}
-        className={
-          actualSize
-            ? 'm-auto block max-w-none cursor-zoom-out'
-            : `max-w-none ${zoomable ? 'cursor-zoom-in' : 'cursor-default'}`
-        }
-      />
+      <div className="photo-surface relative shrink-0" style={natural ? { width: natural.w * (actualSize ? 1 : scale), height: natural.h * (actualSize ? 1 : scale), margin: actualSize ? 'auto' : undefined } : undefined}>
+        <img
+          src={src}
+          alt={alt}
+          onLoad={(e) => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+          style={actualSize || !natural ? undefined : { width: natural.w * scale, height: natural.h * scale }}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (zoomable) setActualSize(!actualSize)
+          }}
+          className={
+            actualSize
+              ? 'm-auto block max-w-none cursor-zoom-out'
+              : `max-w-none ${zoomable ? 'cursor-zoom-in' : 'cursor-default'}`
+          }
+        />
+        {photo && <StickyNotes photo={photo} />}
+      </div>
       {batchName && (
         <p className="pointer-events-none fixed top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))] max-w-[calc(100%-6rem)] truncate rounded-full bg-black/70 px-3 py-2 text-sm text-white" title={batchName}>
           <span className="text-white/70">Upload: </span>{batchName}
