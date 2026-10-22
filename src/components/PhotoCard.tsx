@@ -2,7 +2,9 @@ import { photoUrl, type Group, type Photo } from '../db'
 
 interface Props {
   photo: Photo
-  group?: Group
+  groups?: Group[]
+  /** Shown on hover inside a group's section. */
+  onRemoveFromGroup?: () => void
   selected?: boolean
   onOpen: () => void
   onToggleSelect?: () => void
@@ -11,7 +13,7 @@ interface Props {
   dimmed?: boolean
 }
 
-export default function PhotoCard({ photo, group, selected, onOpen, onToggleSelect, draggable, onDragStart, dimmed }: Props) {
+export default function PhotoCard({ photo, groups = [], onRemoveFromGroup, selected, onOpen, onToggleSelect, draggable, onDragStart, dimmed }: Props) {
   return (
     <div
       draggable={draggable}
@@ -39,6 +41,19 @@ export default function PhotoCard({ photo, group, selected, onOpen, onToggleSele
         </button>
       )}
 
+      {onRemoveFromGroup && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemoveFromGroup()
+          }}
+          title="Remove from this group (the photo stays in your pile)"
+          className="absolute top-2 left-10 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100 hover:bg-black/70"
+        >
+          ✕ Remove from group
+        </button>
+      )}
+
       <div className="absolute top-2 right-2 flex gap-1">
         {photo.theOne && (
           <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold text-white shadow">THE ONE</span>
@@ -53,13 +68,13 @@ export default function PhotoCard({ photo, group, selected, onOpen, onToggleSele
         )}
       </div>
 
-      {(group || photo.labels.length > 0 || photo.note) && (
+      {(groups.length > 0 || photo.labels.length > 0 || photo.note) && (
         <div className="absolute inset-x-0 bottom-0 flex flex-wrap gap-1 bg-gradient-to-t from-black/60 to-transparent p-2 pt-6">
-          {group && (
-            <span className="rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: group.color }}>
-              {group.name}
+          {groups.map((g) => (
+            <span key={g.id} className="rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: g.color }}>
+              {g.name}
             </span>
-          )}
+          ))}
           {photo.labels.map((l) => (
             <span key={l} className="rounded-full bg-white/90 px-2 py-0.5 text-xs">
               {l}

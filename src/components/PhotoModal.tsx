@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Lightbox from './Lightbox'
-import { createGroup, db, deletePhotos, makeTheOne, photoUrl, type Group, type Photo } from '../db'
+import { addToGroup, createGroup, db, toggleGroup, deletePhotos, makeTheOne, photoUrl, type Group, type Photo } from '../db'
 
 interface Props {
   photo: Photo
@@ -45,7 +45,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
 
   async function newGroup() {
     const name = prompt('Name the new group')?.trim()
-    if (name) update({ groupId: await createGroup(name) })
+    if (name) await addToGroup([photo.id], await createGroup(name))
   }
 
   const suggestions = labels.filter((l) => !photo.labels.includes(l))
@@ -113,10 +113,10 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
             {groups.map((g) => (
               <button
                 key={g.id}
-                onClick={() => update({ groupId: photo.groupId === g.id ? null : g.id })}
+                onClick={() => toggleGroup(photo, g.id)}
                 className="rounded-full border px-3 py-1 text-sm"
                 style={
-                  photo.groupId === g.id
+                  photo.groupIds.includes(g.id)
                     ? { background: g.color, borderColor: g.color, color: 'white' }
                     : { borderColor: '#e7e5e4' }
                 }

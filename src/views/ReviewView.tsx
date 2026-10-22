@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { createGroup, db, isUndecided, photoUrl, roundPhotos, setRound, type Group, type Photo } from '../db'
+import { addToGroup, createGroup, db, groupsOf, isUndecided, photoUrl, roundPhotos, setRound, toggleGroup, type Group, type Photo } from '../db'
 import type { Tab } from '../App'
 import Lightbox from '../components/Lightbox'
 
@@ -85,17 +85,15 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     setCurrentId(id)
   }
 
-  async function toggleGroup(group: Group) {
-    if (!photo) return
-    await db.photos.update(photo.id, { groupId: photo.groupId === group.id ? null : group.id })
+  async function toggle(group: Group) {
+    if (photo) await toggleGroup(photo, group.id)
   }
 
   async function newGroup() {
     if (!photo) return
     const name = prompt('Name the new group (e.g. "Florals" or "Studio Aurora")')?.trim()
     if (!name) return
-    const id = await createGroup(name)
-    await db.photos.update(photo.id, { groupId: id })
+    await addToGroup([photo.id], await createGroup(name))
   }
 
   // Keyboard shortcuts. Re-bound each render so handlers see the latest photo.
@@ -109,7 +107,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
       else if (e.key === 'ArrowUp' || e.key === 'b') back()
       else if (e.key === 'z' || e.key === 'Backspace') undo()
       else if (e.key === 'f' && photo) setFullscreen(true)
-      else if (/^[1-9]$/.test(e.key) && groups[Number(e.key) - 1]) toggleGroup(groups[Number(e.key) - 1])
+      else if (/^[1-9]$/.test(e.key) && groups[Number(e.key) - 1]) toggle(groups[Number(e.key) - 1])
       else return
       e.preventDefault()
     }
@@ -168,7 +166,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     )
   }
 
-  const group = groups.find((g) => g.id === photo.groupId)
+  const photoGroups = groupsOf(photo, groups)
   const liked = !photo.out && photo.level >= round
 
   return (
@@ -211,13 +209,13 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
             {liked ? '❤️ You liked this' : 'You passed on this'} · change it below
           </span>
         )}
-        {(group || photo.labels.length > 0) && (
+        {(photoGroups.length > 0 || photo.labels.length > 0) && (
           <div className="absolute top-8 left-1/2 flex -translate-x-1/2 gap-2">
-            {group && (
-              <span className="rounded-full px-3 py-1 text-sm font-medium text-white" style={{ background: group.color }}>
-                {group.name}
+            {photoGroups.map((g) => (
+              <span key={g.id} className="rounded-full px-3 py-1 text-sm font-medium text-white" style={{ background: g.color }}>
+                {g.name}
               </span>
-            )}
+            ))}
             {photo.labels.map((l) => (
               <span key={l} className="rounded-full bg-white/90 px-3 py-1 text-sm shadow">
                 {l}
@@ -270,10 +268,10 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         {groups.slice(0, 9).map((g, i) => (
           <button
             key={g.id}
-            onClick={() => toggleGroup(g)}
+            onClick={() => toggle(g)}
             className="flex items-center gap-2 rounded-full border px-3 py-1"
             style={
-              photo.groupId === g.id
+              photo.groupIds.includes(g.id)
                 ? { background: g.color, borderColor: g.color, color: 'white' }
                 : { borderColor: '#e7e5e4' }
             }

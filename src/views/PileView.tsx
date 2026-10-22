@@ -1,5 +1,16 @@
 import { useState } from 'react'
-import { allLabels, createGroup, db, deletePhotos, likedPhotos, type Group, type Photo } from '../db'
+import {
+  addToGroup,
+  allLabels,
+  createGroup,
+  db,
+  deletePhotos,
+  groupsOf,
+  likedPhotos,
+  removeFromGroup,
+  type Group,
+  type Photo,
+} from '../db'
 import PhotoCard from '../components/PhotoCard'
 import PhotoModal from '../components/PhotoModal'
 
@@ -26,11 +37,11 @@ export default function PileView({ photos, groups }: Props) {
   const passed = photos.filter((p) => p.out).sort((a, b) => b.outRound - a.outRound || a.addedAt - b.addedAt)
 
   const sections = [
-    ...groups.map((g) => ({ id: g.id, group: g as Group | undefined, photos: liked.filter((p) => p.groupId === g.id) })),
-    { id: UNGROUPED, group: undefined, photos: liked.filter((p) => !groups.some((g) => g.id === p.groupId)) },
+    ...groups.map((g) => ({ id: g.id, group: g as Group | undefined, photos: liked.filter((p) => p.groupIds.includes(g.id)) })),
+    { id: UNGROUPED, group: undefined, photos: liked.filter((p) => groupsOf(p, groups).length === 0) },
   ]
-  // Order used for prev/next in the photo viewer.
-  const ordered = [...sections.flatMap((s) => s.photos), ...(showPassed ? passed : [])]
+  // Order used for prev/next in the photo viewer. A photo in several groups appears once.
+  const ordered = [...new Set([...sections.flatMap((s) => s.photos), ...(showPassed ? passed : [])])]
   const openIndex = ordered.findIndex((p) => p.id === openId)
   const openPhoto = photos.find((p) => p.id === openId)
 
@@ -41,10 +52,6 @@ export default function PileView({ photos, groups }: Props) {
       else next.add(id)
       return next
     })
-
-  async function moveToGroup(ids: number[], groupId: number | null) {
-    await db.photos.where('id').anyOf(ids).modify({ groupId })
-  }
 
   async function bulk(changes: Partial<Photo>) {
     await db.photos.where('id').anyOf([...selected]).modify(changes)
@@ -78,7 +85,10 @@ export default function PileView({ photos, groups }: Props) {
     const name = prompt('Name the new group (e.g. "Florals" or "Studio Aurora")')?.trim()
     if (!name) return
     const id = await createGroup(name)
-    if (selected.size) await bulk({ groupId: id })
+    if (selected.size) {
+      await addToGroup([...selected], id)
+      setSelected(new Set())
+    }
   }
 
   async function renameGroup(g: Group) {
@@ -87,15 +97,15 @@ export default function PileView({ photos, groups }: Props) {
   }
 
   async function deleteGroup(g: Group) {
-    if (!confirm(`Delete the group "${g.name}"? Its photos stay, just ungrouped.`)) return
-    await db.photos.where('id').anyOf(photos.filter((p) => p.groupId === g.id).map((p) => p.id)).modify({ groupId: null })
+    if (!confirm(`Delete the group "${g.name}"? Its photos stay, just not in this group.`)) return
+    await removeFromGroup(photos.filter((p) => p.groupIds.includes(g.id)).map((p) => p.id), g.id)
     await db.groups.delete(g.id)
   }
 
   function dragStart(e: React.DragEvent, photo: Photo) {
     const ids = selected.has(photo.id) ? [...selected] : [photo.id]
     e.dataTransfer.setData('application/x-yes-pile', JSON.stringify(ids))
-    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.effectAllowed = 'copy'
   }
 
   function dropProps(sectionId: number) {
@@ -113,7 +123,11 @@ export default function PileView({ photos, groups }: Props) {
         e.preventDefault()
         e.stopPropagation()
         setDropTarget(null)
-        moveToGroup(JSON.parse(data), sectionId === UNGROUPED ? null : sectionId)
+        const ids: number[] = JSON.parse(data)
+        // Dropping on a group adds it there (it stays in its other groups too).
+        // Dropping on "Not grouped" takes it out of every group.
+        if (sectionId === UNGROUPED) db.photos.where('id').anyOf(ids).modify({ groupIds: [] })
+        else addToGroup(ids, sectionId)
       },
     }
   }
@@ -136,22 +150,37 @@ export default function PileView({ photos, groups }: Props) {
             <select
               value=""
               onChange={(e) => {
-                const v = e.target.value
-                if (v === 'new') newGroup()
-                else bulk({ groupId: v === 'none' ? null : Number(v) })
+                const [action, id] = e.target.value.split(':')
+                if (action === 'new') newGroup()
+                else if (action === 'none') bulk({ groupIds: [] })
+                else {
+                  const run = action === 'add' ? addToGroup : removeFromGroup
+                  run([...selected], Number(id)).then(() => setSelected(new Set()))
+                }
               }}
               className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm"
             >
               <option value="" disabled>
-                Move to group…
+                Groups…
               </option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-              <option value="none">No group</option>
-              <option value="new">+ New group…</option>
+              <optgroup label="Add to">
+                {groups.map((g) => (
+                  <option key={g.id} value={`add:${g.id}`}>
+                    {g.name}
+                  </option>
+                ))}
+                <option value="new">+ New group…</option>
+              </optgroup>
+              {groups.length > 0 && (
+                <optgroup label="Remove from">
+                  {groups.map((g) => (
+                    <option key={g.id} value={`remove:${g.id}`}>
+                      {g.name}
+                    </option>
+                  ))}
+                  <option value="none">All groups</option>
+                </optgroup>
+              )}
             </select>
             <form
               onSubmit={(e) => {
@@ -191,7 +220,7 @@ export default function PileView({ photos, groups }: Props) {
         ) : (
           <>
             <span className="mr-2 text-sm text-stone-500">
-              {liked.length} liked · Shift-click or tick to select · drag onto a group
+              {liked.length} liked · Shift-click or tick to select · drag onto a group to add it there
             </span>
             {labels.length > 0 && (
               <div className="flex flex-wrap gap-1">
@@ -249,6 +278,8 @@ export default function PileView({ photos, groups }: Props) {
                     <PhotoCard
                       key={p.id}
                       photo={p}
+                      groups={groupsOf(p, groups).filter((g) => g.id !== id)}
+                      onRemoveFromGroup={group ? () => removeFromGroup([p.id], group.id) : undefined}
                       selected={selected.has(p.id)}
                       onOpen={() => setOpenId(p.id)}
                       onToggleSelect={() => toggle(p.id)}
@@ -275,7 +306,7 @@ export default function PileView({ photos, groups }: Props) {
             {showPassed && (
               <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
                 {passed.map((p) => (
-                  <PhotoCard key={p.id} photo={p} group={groups.find((g) => g.id === p.groupId)} onOpen={() => setOpenId(p.id)} dimmed />
+                  <PhotoCard key={p.id} photo={p} groups={groupsOf(p, groups)} onOpen={() => setOpenId(p.id)} dimmed />
                 ))}
               </div>
             )}

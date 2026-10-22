@@ -38,7 +38,7 @@ export async function importPhotos(
         level: 0,
         out: false,
         outRound: 0,
-        groupId: null,
+        groupIds: [],
         labels: [],
         note: '',
         yes: false,

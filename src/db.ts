@@ -12,7 +12,8 @@ export interface Photo {
   out: boolean
   /** The round it was passed on in. */
   outRound: number
-  groupId: number | null
+  /** A photo can be in several groups; it's still stored once. */
+  groupIds: number[]
   labels: string[]
   note: string
   yes: boolean
@@ -42,6 +43,19 @@ db.version(1).stores({
   meta: 'key',
 })
 
+// v2: a photo can belong to several groups (groupId → groupIds).
+db.version(2)
+  .stores({})
+  .upgrade((tx) =>
+    tx
+      .table('photos')
+      .toCollection()
+      .modify((p) => {
+        p.groupIds = p.groupId == null ? [] : [p.groupId]
+        delete p.groupId
+      }),
+  )
+
 export const GROUP_COLORS = [
   '#e11d48', '#ea580c', '#ca8a04', '#16a34a', '#0891b2',
   '#2563eb', '#7c3aed', '#c026d3', '#57534e',
@@ -50,6 +64,36 @@ export const GROUP_COLORS = [
 export async function createGroup(name: string) {
   const count = await db.groups.count()
   return db.groups.add({ name, color: GROUP_COLORS[count % GROUP_COLORS.length] })
+}
+
+/** The groups a photo is in, in the order the groups were made. */
+export function groupsOf(photo: Photo, groups: Group[]) {
+  return groups.filter((g) => photo.groupIds.includes(g.id))
+}
+
+export async function toggleGroup(photo: Photo, groupId: number) {
+  const groupIds = photo.groupIds.includes(groupId)
+    ? photo.groupIds.filter((id) => id !== groupId)
+    : [...photo.groupIds, groupId]
+  await db.photos.update(photo.id, { groupIds })
+}
+
+export async function addToGroup(ids: number[], groupId: number) {
+  await db.photos
+    .where('id')
+    .anyOf(ids)
+    .modify((p) => {
+      if (!p.groupIds.includes(groupId)) p.groupIds.push(groupId)
+    })
+}
+
+export async function removeFromGroup(ids: number[], groupId: number) {
+  await db.photos
+    .where('id')
+    .anyOf(ids)
+    .modify((p) => {
+      p.groupIds = p.groupIds.filter((id) => id !== groupId)
+    })
 }
 
 export async function getRound(): Promise<number> {

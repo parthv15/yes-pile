@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { allLabels, db, makeTheOne, photoUrl, type Group, type Photo } from '../db'
+import { allLabels, db, groupsOf, makeTheOne, photoUrl, type Group, type Photo } from '../db'
 import { exportYesPile } from '../exportZip'
 import PhotoCard from '../components/PhotoCard'
 import PhotoModal from '../components/PhotoModal'
@@ -20,7 +20,6 @@ export default function YesView({ photos, groups, goTo }: Props) {
   const ordered = [...(theOne ? [theOne] : []), ...yes]
   const openIndex = ordered.findIndex((p) => p.id === openId)
   const openPhoto = photos.find((p) => p.id === openId)
-  const groupOf = (p: Photo) => groups.find((g) => g.id === p.groupId)
 
   async function exportAll() {
     setExporting(true)
@@ -60,11 +59,11 @@ export default function YesView({ photos, groups, goTo }: Props) {
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-500">This is</p>
               <h2 className="mt-2 font-display text-7xl font-bold">THE ONE.</h2>
               <div className="mt-6 flex flex-wrap gap-2">
-                {groupOf(theOne) && (
-                  <span className="rounded-full px-3 py-1 text-sm font-medium text-white" style={{ background: groupOf(theOne)!.color }}>
-                    {groupOf(theOne)!.name}
+                {groupsOf(theOne, groups).map((g) => (
+                  <span key={g.id} className="rounded-full px-3 py-1 text-sm font-medium text-white" style={{ background: g.color }}>
+                    {g.name}
                   </span>
-                )}
+                ))}
                 {theOne.labels.map((l) => (
                   <span key={l} className="rounded-full bg-stone-200 px-3 py-1 text-sm">
                     {l}
@@ -100,7 +99,7 @@ export default function YesView({ photos, groups, goTo }: Props) {
           <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
             {yes.map((p) => (
               <div key={p.id} className="group relative">
-                <PhotoCard photo={p} group={groupOf(p)} onOpen={() => setOpenId(p.id)} />
+                <PhotoCard photo={p} groups={groupsOf(p, groups)} onOpen={() => setOpenId(p.id)} />
                 <div className="absolute inset-x-2 top-10 flex flex-col gap-1 opacity-0 transition group-hover:opacity-100">
                   <button
                     onClick={() => makeTheOne(p.id)}
