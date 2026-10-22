@@ -13,18 +13,21 @@ Yes Pile is a client-only React + Vite + TypeScript app (Tailwind CSS, Dexie for
    ```
 
 3. **Push and open a PR.** Commit in the worktree, push the branch, and open a pull request against `main` with `gh pr create`.
-4. **Merge it.** Merge with a merge commit so each commit in the PR stays separate, and delete the remote branch:
+4. **Merge it.** Merge with a merge commit so each commit in the PR stays separate:
 
    ```sh
-   gh pr merge <number> --merge --delete-branch
+   gh pr merge <number> --merge
    ```
 
-5. **Remove the worktree.** Back in the main checkout, remove the worktree and local branch, then pull the merged change:
+   Don't pass `--delete-branch`: it fails while the worktree still has the branch checked out, and then skips deleting the remote branch too.
+
+5. **Clean up.** Back in the main checkout, remove the worktree, pull the merged change, and delete the branch locally and on GitHub:
 
    ```sh
    git worktree remove ../yes-pile-<task-name>
    git pull --ff-only
    git branch -d <task-name>
+   git push origin --delete <task-name>
    ```
 
 Every merge to `main` deploys to GitHub Pages, so a merged PR goes live straight away.
