@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Lightbox from './Lightbox'
-import { addToGroup, bringBack, createGroup, db, toggleGroup, deletePhotos, makeTheOne, passPhotos, photoUrl, type Group, type Photo } from '../db'
+import { addToGroup, bringBack, createGroup, db, toggleGroup, deletePhotos, makeTheOne, passPhotos, photoUrl, savePhotoNote, type Group, type Photo } from '../db'
 
 interface Props {
   photo: Photo
@@ -187,7 +187,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            onBlur={() => note !== photo.note && update({ note })}
+            onBlur={() => note !== photo.note && savePhotoNote(photo.id, note)}
             rows={4}
             placeholder="Price, vendor contact, what you love about it…"
             className="w-full resize-none rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-900"
@@ -220,7 +220,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
         </div>
       </aside>
 
-      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} batchName={photo.batchName} onClose={() => setFullscreen(false)} />}
+      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} batchName={photo.batchName} photo={photo} onClose={() => setFullscreen(false)} />}
     </div>
   )
 }

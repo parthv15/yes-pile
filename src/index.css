@@ -131,3 +131,20 @@ button:focus-visible, a:focus-visible {
   .review-controls button { width: auto; padding-block: 0.75rem; }
   .review-hints { display: none; }
 }
+
+
+.photo-surface { container-type: size; }
+.sticky-note { width: min(9rem, 75%); max-height: 100%; overflow: hidden; }
+.sticky-note .sticky-grip { min-height: 22px; height: 22px; font-size: 14px; }
+.sticky-note .sticky-text { min-height: 0; font-size: 12px; line-height: 1.35; }
+@media (pointer: coarse) {
+  .sticky-note .sticky-grip { min-height: 28px; height: 28px; }
+  .sticky-note .sticky-text { min-height: 32px; }
+}
+
+@container (max-height: 120px) {
+  .sticky-note { width: min(6rem, 75%); }
+  .sticky-note .sticky-grip { min-height: 18px; height: 18px; }
+  .sticky-note .sticky-text { min-height: 0; padding: 3px 5px; font-size: 10px; }
+  .sticky-note .line-clamp-3 { -webkit-line-clamp: 1; }
+}

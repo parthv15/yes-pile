@@ -4,6 +4,7 @@ import type { Tab } from '../App'
 import Lightbox from '../components/Lightbox'
 import ReviewCarousel, { type Move, type MoveKind } from '../components/ReviewCarousel'
 import ScrollRow from '../components/ScrollRow'
+import NoteEditor, { type NoteDraft } from '../components/NoteEditor'
 
 interface Props {
   photos: Photo[]
@@ -26,12 +27,22 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
   const [finishing, setFinishing] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const busy = useRef(false)
+  const [placingNote, setPlacingNote] = useState(false)
+  const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null)
 
   // Show the chosen photo, or else the first one still undecided.
   let index = list.findIndex((p) => p.id === currentId)
   if (index === -1) index = list.findIndex((p) => isUndecided(p, round))
   const photo = index >= 0 ? list[index] : undefined
   const undecided = photo ? isUndecided(photo, round) : false
+
+  useEffect(() => setPlacingNote(false), [photo?.id])
+
+  function startNote() {
+    if (!photo || busy.current) return
+    setFullscreen(false)
+    setPlacingNote((value) => !value)
+  }
 
   const progress = {
     liked: list.filter((p) => !p.out && p.level >= round).length,
@@ -124,7 +135,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
       if (e.metaKey || e.ctrlKey || e.altKey) return
       if (e.key === 'ArrowRight' || e.key === 'l') decide('like')
       else if (e.key === 'ArrowLeft' || e.key === 'p') decide('pass')
-      else if (e.key === 'ArrowDown' || e.key === 'm' || e.key === 'n') next()
+      else if (e.key === 'ArrowDown' || e.key === 'm') next()
+      else if (e.key.toLowerCase() === 'n' && !e.repeat) startNote()
+      else if (e.key === 'Escape' && placingNote) setPlacingNote(false)
       else if (e.key === 'ArrowUp' || e.key === 'b') back()
       else if (e.key === 'z' || e.key === 'Backspace') undo()
       else if (e.key === 'f' && photo) setFullscreen(true)
@@ -209,21 +222,21 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         <span className="text-rose-600">❤️ {progress.liked}</span>
       </div>
 
-      <div className="review-toolbar mt-3 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-y border-stone-200 bg-white px-3 py-2 text-sm sm:mt-4 sm:flex-nowrap sm:px-8">
-        <div className="flex min-h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden sm:max-w-[45%] sm:flex-none">
+      <div className="review-toolbar mt-3 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-y border-stone-200 bg-white px-3 py-2 text-sm sm:mt-4 lg:flex-nowrap sm:px-8">
+        <div className="flex min-h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden lg:max-w-[45%] lg:flex-none">
           {photo.batchName && (
             <span className="min-w-0 shrink truncate rounded-full bg-stone-100 px-3 py-1 font-medium text-stone-800" title={photo.batchName}>
-              <span className="font-normal text-stone-500">Upload: </span>
+              <span className="hidden font-normal text-stone-500 sm:inline">Upload: </span>
               {photo.batchName}
             </span>
           )}
           {!undecided && !finishing && (
             <span
-              className={`shrink-0 rounded-full px-3 py-1 font-medium whitespace-nowrap ${
+              className={`min-w-0 shrink truncate rounded-full px-3 py-1 font-medium whitespace-nowrap ${
                 liked ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'
               }`}
             >
-              {liked ? '❤️ You liked this' : 'You passed on this'}
+              <span className="sm:hidden">{liked ? '❤️ Liked' : 'Passed'}</span><span className="hidden sm:inline">{liked ? '❤️ You liked this' : 'You passed on this'}</span>
             </span>
           )}
           {photo.labels.map((l) => (
@@ -232,6 +245,10 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
             </span>
           ))}
         </div>
+        <button onClick={startNote} disabled={finishing} aria-pressed={placingNote} title="Add note (N)"
+          className={`order-2 flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 font-medium disabled:opacity-40 sm:order-3 ${placingNote ? 'border-amber-400 bg-amber-100 text-amber-900' : 'border-stone-300 text-stone-700 hover:bg-stone-100'}`}>
+          Note <kbd className="hidden text-xs font-normal text-stone-400 sm:inline">N</kbd>
+        </button>
         <button
           onClick={undo}
           disabled={!history.length}
@@ -245,7 +262,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           Undo
           <kbd className="hidden text-xs font-normal text-stone-400 sm:inline">Z</kbd>
         </button>
-        <div className="review-groups order-3 flex w-full items-center gap-2 sm:order-2 sm:w-auto sm:min-w-0 sm:flex-1 sm:justify-end">
+        <div className="review-groups order-3 flex w-full items-center gap-2 lg:order-2 lg:w-auto lg:min-w-0 lg:flex-1 lg:justify-end">
           <span className="shrink-0 text-stone-400">Group:</span>
           {groups.length > 0 && (
             <ScrollRow className="flex-1 gap-2 sm:flex-initial">
@@ -273,6 +290,10 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
       </div>
 
       <div className="review-photo relative min-h-0 flex-1 overflow-hidden">
+        {placingNote && <div role="status" className="absolute inset-x-2 top-1 z-30 flex items-center justify-center gap-2 text-xs">
+          <span className="rounded-full bg-amber-100 px-3 py-2 text-amber-950 shadow-sm">Tap the photo to place a note</span>
+          <button onClick={() => setPlacingNote(false)} className="rounded-full bg-white px-3 py-2 text-stone-600 shadow-sm">Cancel</button>
+        </div>}
         <ReviewCarousel
           prev={previous && !finishing ? { key: keyOf(previous), photo: previous } : undefined}
           current={finishing ? undefined : { key: keyOf(photo), photo }}
@@ -281,6 +302,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           onBack={back}
           onNext={next}
           onOpen={() => setFullscreen(true)}
+          placing={placingNote}
+          onPlace={(position) => { setPlacingNote(false); setNoteDraft({ photoId: photo.id, ...position, text: '' }) }}
+          onEditNote={setNoteDraft}
         />
       </div>
 
@@ -316,10 +340,11 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         </button>
       </div>
       <p className="review-hints hidden shrink-0 bg-white pb-3 text-center text-xs text-stone-400 sm:block">
-        ← pass · → like · ↓ maybe / next · ↑ back · F full screen · Z undo
+        ← pass · → like · ↓ maybe / next · ↑ back · F full screen · N note · Z undo
       </p>
 
-      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} batchName={photo.batchName} onClose={() => setFullscreen(false)} />}
+      {noteDraft && <NoteEditor draft={noteDraft} onClose={() => setNoteDraft(null)} />}
+      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} batchName={photo.batchName} photo={photo} onClose={() => setFullscreen(false)} />}
     </div>
   )
 }

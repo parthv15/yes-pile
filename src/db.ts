@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import { appendStickyNote, changePhotoNote, deleteStickyNote, editStickyNote, clampPosition, type StickyNote } from './photoNotes'
 
 export interface Photo {
   id: number
@@ -20,6 +21,8 @@ export interface Photo {
   groupIds: number[]
   labels: string[]
   note: string
+  /** Optional placement metadata; sticky text lives in note, without a second copy. */
+  stickyNotes?: StickyNote[]
   yes: boolean
   theOne: boolean
 }
@@ -195,4 +198,27 @@ function forgetUrls(id: number) {
     if (url) URL.revokeObjectURL(url)
     urlCache.delete(key)
   }
+}
+
+
+export async function savePhotoNote(id: number, note: string) {
+  await db.photos.where('id').equals(id).modify((p) => { Object.assign(p, changePhotoNote(p, note)) })
+}
+
+export async function saveStickyNote(id: number, text: string, position: { x: number; y: number }, stickyId?: string) {
+  const newId = stickyId ?? crypto.randomUUID()
+  await db.photos.where('id').equals(id).modify((p) => {
+    Object.assign(p, stickyId ? editStickyNote(p, stickyId, text) : appendStickyNote(p, text, position, newId))
+  })
+}
+
+export async function removeStickyNote(id: number, stickyId: string) {
+  await db.photos.where('id').equals(id).modify((p) => { Object.assign(p, deleteStickyNote(p, stickyId)) })
+}
+
+export async function moveStickyNote(id: number, stickyId: string, position: { x: number; y: number }) {
+  await db.photos.where('id').equals(id).modify((p) => {
+    p.stickyNotes = p.stickyNotes?.map((s) => s.id === stickyId
+      ? { ...s, x: clampPosition(position.x), y: clampPosition(position.y) } : s)
+  })
 }
