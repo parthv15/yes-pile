@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { allLabels, createGroup, db, likedPhotos, type Group, type Photo } from '../db'
+import { allLabels, createGroup, db, deletePhotos, likedPhotos, type Group, type Photo } from '../db'
 import PhotoCard from '../components/PhotoCard'
 import PhotoModal from '../components/PhotoModal'
 
@@ -49,6 +49,17 @@ export default function PileView({ photos, groups }: Props) {
   async function bulk(changes: Partial<Photo>) {
     await db.photos.where('id').anyOf([...selected]).modify(changes)
     setSelected(new Set())
+  }
+
+  async function deleteSelected() {
+    if (!confirm(`Delete ${selected.size} photo${selected.size === 1 ? '' : 's'} for good?`)) return
+    await deletePhotos([...selected])
+    setSelected(new Set())
+  }
+
+  async function deletePassed() {
+    if (!confirm(`Delete all ${passed.length} passed photos for good? You won't be able to bring them back.`)) return
+    await deletePhotos(passed.map((p) => p.id))
   }
 
   async function bulkAddLabel() {
@@ -170,6 +181,9 @@ export default function PileView({ photos, groups }: Props) {
             >
               Pass
             </button>
+            <button onClick={deleteSelected} className="rounded-full px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50">
+              Delete
+            </button>
             <button onClick={() => setSelected(new Set())} className="ml-auto text-sm text-stone-500 hover:text-stone-900">
               Clear selection
             </button>
@@ -250,9 +264,14 @@ export default function PileView({ photos, groups }: Props) {
 
         {passed.length > 0 && (
           <section className="border-t border-stone-200 pt-6">
-            <button onClick={() => setShowPassed(!showPassed)} className="text-sm text-stone-500 hover:text-stone-900">
-              {showPassed ? '▾' : '▸'} Passed ({passed.length}) — bring any back if you change your mind
-            </button>
+            <div className="flex items-center justify-between">
+              <button onClick={() => setShowPassed(!showPassed)} className="text-sm text-stone-500 hover:text-stone-900">
+                {showPassed ? '▾' : '▸'} Passed ({passed.length}) — bring any back if you change your mind
+              </button>
+              <button onClick={deletePassed} className="text-sm text-rose-600 hover:text-rose-700">
+                Delete all passed
+              </button>
+            </div>
             {showPassed && (
               <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
                 {passed.map((p) => (
