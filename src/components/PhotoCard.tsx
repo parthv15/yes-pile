@@ -19,7 +19,7 @@ export default function PhotoCard({ photo, groups = [], onRemoveFromGroup, selec
       draggable={draggable}
       onDragStart={onDragStart}
       onClick={(e) => (e.shiftKey && onToggleSelect ? onToggleSelect() : onOpen())}
-      className={`group relative cursor-pointer overflow-hidden rounded-xl bg-stone-200 ring-offset-2 transition ${
+      className={`photo-card group relative min-w-0 cursor-pointer overflow-hidden rounded-xl bg-stone-200 ring-offset-2 transition ${
         selected ? 'ring-3 ring-stone-900' : 'hover:ring-2 hover:ring-stone-300'
       } ${dimmed ? 'opacity-50 grayscale hover:opacity-100 hover:grayscale-0' : ''}`}
     >
@@ -31,7 +31,9 @@ export default function PhotoCard({ photo, groups = [], onRemoveFromGroup, selec
             e.stopPropagation()
             onToggleSelect()
           }}
-          className={`absolute top-2 left-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs text-white transition ${
+          aria-label={selected ? `Deselect ${photo.name}` : `Select ${photo.name}`}
+          aria-pressed={!!selected}
+          className={`touch-action absolute top-2 left-2 flex h-11 w-11 sm:h-6 sm:w-6 items-center justify-center rounded-full border-2 text-xs text-white transition ${
             selected
               ? 'border-stone-900 bg-stone-900'
               : 'border-white bg-black/20 opacity-0 group-hover:opacity-100'
@@ -48,7 +50,7 @@ export default function PhotoCard({ photo, groups = [], onRemoveFromGroup, selec
             onRemoveFromGroup()
           }}
           title="Remove from this group (the photo stays in your pile)"
-          className="absolute top-2 left-10 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100 hover:bg-black/70"
+          className="photo-remove absolute top-2 left-10 hidden sm:block rounded-full bg-black/50 px-2 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100 hover:bg-black/70"
         >
           ✕ Remove from group
         </button>
@@ -71,12 +73,12 @@ export default function PhotoCard({ photo, groups = [], onRemoveFromGroup, selec
       {(groups.length > 0 || photo.labels.length > 0 || photo.note) && (
         <div className="absolute inset-x-0 bottom-0 flex flex-wrap gap-1 bg-gradient-to-t from-black/60 to-transparent p-2 pt-6">
           {groups.map((g) => (
-            <span key={g.id} className="rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: g.color }}>
+            <span key={g.id} className="max-w-full truncate rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: g.color }}>
               {g.name}
             </span>
           ))}
           {photo.labels.map((l) => (
-            <span key={l} className="rounded-full bg-white/90 px-2 py-0.5 text-xs">
+            <span key={l} className="max-w-full truncate rounded-full bg-white/90 px-2 py-0.5 text-xs">
               {l}
             </span>
           ))}

@@ -143,7 +143,7 @@ export default function PileView({ photos, groups }: Props) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-stone-200 bg-stone-50/95 px-8 py-3 backdrop-blur">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-stone-200 bg-stone-50/95 px-4 py-3 sm:px-8 backdrop-blur">
         {selected.size > 0 ? (
           <>
             <span className="mr-2 text-sm font-medium">{selected.size} selected</span>
@@ -220,7 +220,7 @@ export default function PileView({ photos, groups }: Props) {
         ) : (
           <>
             <span className="mr-2 text-sm text-stone-500">
-              {liked.length} liked · Shift-click or tick to select · drag onto a group to add it there
+              {liked.length} liked <span className="sm:hidden">· Tick photos for group actions</span><span className="hidden sm:inline">· Shift-click or tick to select · drag onto a group to add it there</span>
             </span>
             {labels.length > 0 && (
               <div className="flex flex-wrap gap-1">
@@ -244,18 +244,18 @@ export default function PileView({ photos, groups }: Props) {
         )}
       </div>
 
-      <div className="flex flex-col gap-8 px-8 py-6">
+      <div className="flex flex-col gap-5 px-2 py-4 sm:gap-8 sm:px-8 sm:py-6">
         {sections.map(({ id, group, photos: sectionPhotos }) => {
           if (!group && sectionPhotos.length === 0) return null
           return (
             <section
               key={id}
               {...dropProps(id)}
-              className={`rounded-2xl p-4 transition ${dropTarget === id ? 'bg-rose-50 ring-2 ring-rose-300' : ''}`}
+              className={`rounded-2xl p-2 transition sm:p-4 ${dropTarget === id ? 'bg-rose-50 ring-2 ring-rose-300' : ''}`}
             >
-              <div className="mb-3 flex items-center gap-3">
+              <div className="mb-3 flex flex-wrap items-center gap-2 sm:gap-3">
                 <span className="h-3 w-3 rounded-full" style={{ background: group?.color ?? '#a8a29e' }} />
-                <h2 className="font-display text-xl">{group?.name ?? (groups.length ? 'Not grouped yet' : 'All liked')}</h2>
+                <h2 className="min-w-0 break-words font-display text-xl">{group?.name ?? (groups.length ? 'Not grouped yet' : 'All liked')}</h2>
                 <span className="text-sm text-stone-400">{sectionPhotos.length}</span>
                 {group && (
                   <div className="ml-2 flex gap-2 text-xs text-stone-400">
@@ -273,7 +273,7 @@ export default function PileView({ photos, groups }: Props) {
                   Drag photos here
                 </p>
               ) : (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
                   {sectionPhotos.map((p) => (
                     <PhotoCard
                       key={p.id}
@@ -295,7 +295,7 @@ export default function PileView({ photos, groups }: Props) {
 
         {passed.length > 0 && (
           <section className="border-t border-stone-200 pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <button onClick={() => setShowPassed(!showPassed)} className="text-sm text-stone-500 hover:text-stone-900">
                 {showPassed ? '▾' : '▸'} Passed ({passed.length}) — bring any back if you change your mind
               </button>
@@ -304,7 +304,7 @@ export default function PileView({ photos, groups }: Props) {
               </button>
             </div>
             {showPassed && (
-              <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
                 {passed.map((p) => (
                   <PhotoCard key={p.id} photo={p} groups={groupsOf(p, groups)} onOpen={() => setOpenId(p.id)} dimmed />
                 ))}

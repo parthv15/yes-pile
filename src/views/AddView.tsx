@@ -27,11 +27,11 @@ export default function AddView({ photos, onFiles, goTo }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10">
-      <div className="flex flex-col items-center rounded-3xl border-2 border-dashed border-stone-300 bg-white px-8 py-16 text-center">
-        <p className="font-display text-3xl">Drop photos anywhere</p>
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-10">
+      <div className="flex flex-col items-center rounded-3xl border-2 border-dashed border-stone-300 bg-white px-4 py-8 sm:px-8 sm:py-16 text-center">
+        <p className="font-display text-2xl sm:text-3xl"><span className="sm:hidden">Add your photos</span><span className="hidden sm:inline">Drop photos anywhere</span></p>
         <p className="mt-2 text-stone-500">Vendor shots, screenshots, inspiration. Add as many as you like.</p>
-        <div className="mt-8 flex gap-3">
+        <div className="mt-6 flex w-full flex-col gap-3 sm:mt-8 sm:w-auto sm:flex-row">
           <button
             onClick={() => filesInput.current?.click()}
             className="rounded-full bg-stone-900 px-6 py-3 font-medium text-white hover:bg-stone-700"
@@ -81,14 +81,14 @@ export default function AddView({ photos, onFiles, goTo }: Props) {
               Start reviewing →
             </button>
           </div>
-          <div className="mt-4 grid grid-cols-8 gap-2">
+          <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">
             {recent.slice(0, 48).map((p) => (
               <img key={p.id} src={photoUrl(p)} alt={p.name} className="aspect-square w-full rounded-lg object-cover" />
             ))}
           </div>
           {photos.length > 48 && <p className="mt-2 text-sm text-stone-400">and {photos.length - 48} more</p>}
 
-          <div className="mt-16 flex gap-3 border-t border-stone-200 pt-6 text-sm">
+          <div className="mt-10 flex flex-wrap gap-3 sm:mt-16 border-t border-stone-200 pt-6 text-sm">
             <button onClick={startOver} className="rounded-full border border-stone-300 px-4 py-2 hover:bg-stone-100">
               Start over from round 1
             </button>

@@ -14,6 +14,10 @@ Built for sorting through wedding vendor photos, but it works for any pile of pi
 4. **Decide.** Open a photo and choose **THE ONE!** or **Add to Yes Pile**.
 5. **Keep it.** The **Yes Pile** tab shows THE ONE and everything else you said yes to. Download it all as a zip.
 
+### On a phone or tablet
+
+Use **Choose photos** to import from your photo library. On phones, the tabs sit at the bottom and the review buttons fit across the screen. Turn your phone sideways to review with the photo beside the controls. Tap a photo to open its details, or tap its selection circle in **Liked** and use **Groups…** for bulk changes. Yes Pile actions are visible without hovering on touchscreens.
+
 ### Keyboard shortcuts while reviewing
 
 | Key | Action |
