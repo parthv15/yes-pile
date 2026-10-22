@@ -58,6 +58,7 @@ export default function YesView({ photos, groups, goTo }: Props) {
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-500">This is</p>
               <h2 className="mt-2 font-display text-5xl sm:text-7xl font-bold">THE ONE.</h2>
+              {theOne.batchName && <p className="mt-3 break-words text-sm text-stone-600">Upload: {theOne.batchName}</p>}
               <div className="mt-6 flex flex-wrap gap-2">
                 {groupsOf(theOne, groups).map((g) => (
                   <span key={g.id} className="rounded-full px-3 py-1 text-sm font-medium text-white" style={{ background: g.color }}>

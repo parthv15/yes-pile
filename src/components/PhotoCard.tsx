@@ -70,8 +70,9 @@ export default function PhotoCard({ photo, groups = [], onRemoveFromGroup, selec
         )}
       </div>
 
-      {(groups.length > 0 || photo.labels.length > 0 || photo.note) && (
+      {(photo.batchName || groups.length > 0 || photo.labels.length > 0 || photo.note) && (
         <div className="absolute inset-x-0 bottom-0 flex flex-wrap gap-1 bg-gradient-to-t from-black/60 to-transparent p-2 pt-6">
+          {photo.batchName && <p className="w-full truncate text-xs font-medium text-white" title={`Upload: ${photo.batchName}`}>{photo.batchName}</p>}
           {groups.map((g) => (
             <span key={g.id} className="max-w-full truncate rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: g.color }}>
               {g.name}

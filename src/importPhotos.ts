@@ -23,8 +23,11 @@ export interface ImportResult {
 export async function importPhotos(
   files: File[],
   onProgress: (done: number, total: number) => void,
+  batchName = '',
 ): Promise<ImportResult> {
   const images = files.filter((f) => f.type.startsWith('image/'))
+  const batchId = crypto.randomUUID()
+  const name = batchName.trim()
   const failed: string[] = []
   let added = 0
   for (const [i, file] of images.entries()) {
@@ -35,6 +38,8 @@ export async function importPhotos(
         blob: file,
         thumb,
         addedAt: Date.now() + i,
+        batchId,
+        ...(name ? { batchName: name } : {}),
         level: 0,
         out: false,
         outRound: 0,

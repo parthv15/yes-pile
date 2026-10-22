@@ -7,6 +7,7 @@ import ReviewView from './views/ReviewView'
 import PileView from './views/PileView'
 import PassedView from './views/PassedView'
 import YesView from './views/YesView'
+import UploadDialog from './components/UploadDialog'
 
 export type Tab = 'add' | 'review' | 'pile' | 'passed' | 'yes'
 
@@ -15,6 +16,7 @@ export interface ImportState {
   total: number
   added?: number
   failed?: string[]
+  batchName?: string
 }
 
 export default function App() {
@@ -24,6 +26,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab | null>(null)
   const [importing, setImporting] = useState<ImportState | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [uploads, setUploads] = useState<{ id: string; files: File[] }[]>([])
 
   if (!photos || !groups || round === undefined) return null
 
@@ -33,10 +36,19 @@ export default function App() {
   const yesCount = photos.filter((p) => p.yes || p.theOne).length
   const current: Tab = tab ?? (photos.length === 0 ? 'add' : queue.length ? 'review' : 'pile')
 
-  async function addFiles(files: File[]) {
-    if (!files.length) return
-    setImporting({ done: 0, total: files.length })
-    const result = await importPhotos(files, (done, total) => setImporting({ done, total }))
+  function addFiles(files: File[]) {
+    const images = files.filter((file) => file.type.startsWith('image/'))
+    if (!images.length) return
+    // Keep separate selections separate, including drops made during an import.
+    setUploads((pending) => [...pending, { id: crypto.randomUUID(), files: images }])
+  }
+
+  async function confirmUpload(batchName: string) {
+    const upload = uploads[0]
+    if (!upload || (importing && importing.added === undefined)) return
+    setImporting({ done: 0, total: upload.files.length, batchName })
+    setUploads((pending) => pending.slice(1))
+    const result = await importPhotos(upload.files, (done, total) => setImporting({ done, total, batchName }), batchName)
     setImporting((s) => s && { ...s, ...result })
   }
 
@@ -88,7 +100,8 @@ export default function App() {
           ))}
         </nav>
         {importing && (
-          <div className="flex w-full items-center gap-3 text-xs text-stone-600 sm:ml-auto sm:w-auto sm:text-sm">
+          <div role="status" className="flex w-full min-w-0 flex-wrap items-center gap-3 text-xs text-stone-600 sm:ml-auto sm:w-auto sm:text-sm">
+            {importing.batchName && <span className="max-w-48 truncate font-medium" title={importing.batchName}>{importing.batchName}</span>}
             {importing.added === undefined ? (
               <>
                 <div className="h-1.5 w-24 overflow-hidden rounded-full bg-stone-200">
@@ -123,6 +136,15 @@ export default function App() {
         {current === 'passed' && <PassedView photos={photos} groups={groups} goTo={setTab} />}
         {current === 'yes' && <YesView photos={photos} groups={groups} goTo={setTab} />}
       </main>
+
+      {uploads[0] && (!importing || importing.added !== undefined) && (
+        <UploadDialog
+          key={uploads[0].id}
+          files={uploads[0].files}
+          onConfirm={confirmUpload}
+          onCancel={() => setUploads((pending) => pending.slice(1))}
+        />
+      )}
 
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-rose-500/10 backdrop-blur-sm">

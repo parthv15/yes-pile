@@ -16,7 +16,7 @@ export async function exportYesPile(photos: Photo[], groups: Group[]) {
     const folder = p.theOne ? '' : `${safe(names[0] ?? 'Yes Pile')}/`
     const file = p.theOne ? `THE ONE - ${safe(p.name)}` : safe(p.name)
     zip.file(folder + file, p.blob)
-    const details = [names.join(', '), p.labels.join(', '), p.note].filter(Boolean).join(' | ')
+    const details = [p.batchName && `Upload: ${p.batchName}`, names.join(', '), p.labels.join(', '), p.note].filter(Boolean).join(' | ')
     notes.push(`${p.theOne ? '❤️ THE ONE ❤️  ' : ''}${folder}${file}${details ? `\n    ${details}` : ''}`)
   }
   zip.file('notes.txt', notes.join('\n\n'))

@@ -6,6 +6,10 @@ export interface Photo {
   blob: Blob
   thumb: Blob
   addedAt: number
+  /** Shared by photos from one import. Older photos have no batch metadata. */
+  batchId?: string
+  /** Optional source/vendor name, separate from editable photo labels and groups. */
+  batchName?: string
   /** Number of rounds this photo has been liked in. 0 = not reviewed yet. */
   level: number
   /** Passed on during review. */
