@@ -72,12 +72,19 @@ export function likedPhotos(photos: Photo[]) {
   return photos.filter((p) => !p.out && p.level > 0)
 }
 
-/** How far through the current round you are. */
-export function roundProgress(photos: Photo[], round: number) {
-  const liked = photos.filter((p) => !p.out && p.level >= round).length
-  const passed = photos.filter((p) => p.out && p.outRound === round).length
-  const left = reviewQueue(photos, round).length
-  return { liked, passed, left, total: liked + passed + left }
+/**
+ * Every photo that belongs to the current round, decided or not, in a stable
+ * order so you can step back and forth through it.
+ */
+export function roundPhotos(photos: Photo[], round: number) {
+  return photos
+    .filter((p) => !p.yes && !p.theOne && (p.out ? p.outRound === round : p.level <= round))
+    .sort((a, b) => a.addedAt - b.addedAt)
+}
+
+/** Not yet liked or passed in this round. */
+export function isUndecided(photo: Photo, round: number) {
+  return !photo.out && photo.level < round
 }
 
 export function allLabels(photos: Photo[]) {

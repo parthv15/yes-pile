@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { createGroup, db, photoUrl, reviewQueue, roundProgress, setRound, type Group, type Photo } from '../db'
+import { createGroup, db, isUndecided, photoUrl, roundPhotos, setRound, type Group, type Photo } from '../db'
 import type { Tab } from '../App'
 
 interface Props {
@@ -12,22 +12,66 @@ interface Props {
 type Snapshot = Pick<Photo, 'id' | 'level' | 'out' | 'outRound'>
 
 export default function ReviewView({ photos, groups, round, goTo }: Props) {
-  const queue = reviewQueue(photos, round)
-  const progress = roundProgress(photos, round)
-  const photo = queue[0]
-  const next = queue[1]
+  const list = roundPhotos(photos, round)
+  const [currentId, setCurrentId] = useState<number | null>(null)
   const [history, setHistory] = useState<Snapshot[]>([])
-  const [flash, setFlash] = useState<'like' | 'pass' | null>(null)
+  const [flash, setFlash] = useState<'like' | 'pass' | 'maybe' | null>(null)
   const busy = useRef(false)
+
+  // Show the chosen photo, or else the first one still undecided.
+  let index = list.findIndex((p) => p.id === currentId)
+  if (index === -1) index = list.findIndex((p) => isUndecided(p, round))
+  const photo = index >= 0 ? list[index] : undefined
+  const undecided = photo ? isUndecided(photo, round) : false
+
+  const progress = {
+    liked: list.filter((p) => !p.out && p.level >= round).length,
+    passed: list.filter((p) => p.out).length,
+    total: list.length,
+  }
+  const done = progress.liked + progress.passed
+
+  /** The next undecided photo after position i, wrapping around to the start. */
+  function nextUndecided(i: number) {
+    for (let step = 1; step < list.length; step++) {
+      const p = list[(i + step) % list.length]
+      if (isUndecided(p, round)) return p
+    }
+    return undefined
+  }
+
+  const upcoming = photo && nextUndecided(index)
+
+  function animate(kind: 'like' | 'pass' | 'maybe') {
+    setFlash(kind)
+    setTimeout(() => setFlash(null), 250)
+  }
 
   async function decide(kind: 'like' | 'pass') {
     if (!photo || busy.current) return
     busy.current = true
     setHistory((h) => [...h.slice(-50), { id: photo.id, level: photo.level, out: photo.out, outRound: photo.outRound }])
-    setFlash(kind)
-    await db.photos.update(photo.id, kind === 'like' ? { level: round } : { out: true, outRound: round })
-    setTimeout(() => setFlash(null), 250)
+    animate(kind)
+    await db.photos.update(
+      photo.id,
+      kind === 'like' ? { level: round, out: false, outRound: 0 } : { out: true, outRound: round },
+    )
+    // `null` falls back to the first undecided photo, or the round-done screen.
+    setCurrentId(nextUndecided(index)?.id ?? null)
     busy.current = false
+  }
+
+  /** Maybe on an undecided photo: leave it for later. Next on a decided one: step forward. */
+  function next() {
+    if (!photo) return
+    animate('maybe')
+    if (undecided) setCurrentId(nextUndecided(index)?.id ?? photo.id)
+    else setCurrentId(list[index + 1]?.id ?? nextUndecided(index)?.id ?? null)
+  }
+
+  function back() {
+    if (photo && index > 0) setCurrentId(list[index - 1].id)
+    else if (!photo && list.length) setCurrentId(list[list.length - 1].id)
   }
 
   async function undo() {
@@ -36,6 +80,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     setHistory((h) => h.slice(0, -1))
     const { id, ...rest } = last
     await db.photos.update(id, rest)
+    setCurrentId(id)
   }
 
   async function toggleGroup(group: Group) {
@@ -58,6 +103,8 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
       if (e.metaKey || e.ctrlKey || e.altKey) return
       if (e.key === 'ArrowRight' || e.key === 'l') decide('like')
       else if (e.key === 'ArrowLeft' || e.key === 'p') decide('pass')
+      else if (e.key === 'ArrowDown' || e.key === 'm' || e.key === 'n') next()
+      else if (e.key === 'ArrowUp' || e.key === 'b') back()
       else if (e.key === 'z' || e.key === 'Backspace') undo()
       else if (/^[1-9]$/.test(e.key) && groups[Number(e.key) - 1]) toggleGroup(groups[Number(e.key) - 1])
       else return
@@ -108,9 +155,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           <button onClick={() => goTo('pile')} className="rounded-full border border-stone-300 px-6 py-3 font-medium hover:bg-stone-100">
             See liked photos
           </button>
-          {history.length > 0 && (
-            <button onClick={undo} className="rounded-full px-6 py-3 font-medium text-stone-500 hover:bg-stone-100">
-              Undo last
+          {list.length > 0 && (
+            <button onClick={back} className="rounded-full px-6 py-3 font-medium text-stone-500 hover:bg-stone-100">
+              ↑ Back to last photo
             </button>
           )}
         </div>
@@ -119,7 +166,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
   }
 
   const group = groups.find((g) => g.id === photo.groupId)
-  const done = progress.total - progress.left
+  const liked = !photo.out && photo.level >= round
 
   return (
     <div className="flex h-full flex-col">
@@ -140,10 +187,25 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           src={photoUrl(photo, 'full')}
           alt={photo.name}
           className={`max-h-full max-w-full rounded-2xl object-contain shadow-xl transition duration-200 ${
-            flash === 'like' ? 'translate-x-6 opacity-60' : flash === 'pass' ? '-translate-x-6 opacity-60' : ''
+            flash === 'like'
+              ? 'translate-x-6 opacity-60'
+              : flash === 'pass'
+                ? '-translate-x-6 opacity-60'
+                : flash === 'maybe'
+                  ? 'translate-y-6 opacity-60'
+                  : ''
           }`}
         />
-        {next && <link rel="preload" as="image" href={photoUrl(next, 'full')} />}
+        {upcoming && <link rel="preload" as="image" href={photoUrl(upcoming, 'full')} />}
+        {!undecided && (
+          <span
+            className={`absolute top-8 left-8 rounded-full px-3 py-1 text-sm font-medium shadow ${
+              liked ? 'bg-stone-900 text-white' : 'bg-white text-stone-600'
+            }`}
+          >
+            {liked ? '❤️ You liked this' : 'You passed on this'} · change it below
+          </span>
+        )}
         {(group || photo.labels.length > 0) && (
           <div className="absolute top-8 left-1/2 flex -translate-x-1/2 gap-2">
             {group && (
@@ -160,51 +222,65 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         )}
       </div>
 
-      <div className="flex items-center justify-center gap-6 pb-6">
+      <div className="flex items-center justify-center gap-3 pb-2">
+        <button
+          onClick={back}
+          disabled={index <= 0}
+          className="flex w-28 items-center justify-center rounded-full py-4 font-medium text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+        >
+          ↑ Back
+        </button>
         <button
           onClick={() => decide('pass')}
-          className="flex w-40 items-center justify-center gap-2 rounded-full border border-stone-300 bg-white py-4 text-lg font-medium hover:bg-stone-100"
+          className={`flex w-36 items-center justify-center rounded-full border py-4 text-lg font-medium ${
+            photo.out ? 'border-stone-900 bg-stone-200' : 'border-stone-300 bg-white hover:bg-stone-100'
+          }`}
         >
           ← Pass
         </button>
         <button
-          onClick={undo}
-          disabled={!history.length}
-          className="rounded-full px-4 py-2 text-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30"
+          onClick={next}
+          className="flex w-36 items-center justify-center rounded-full border border-stone-300 bg-white py-4 text-lg font-medium hover:bg-stone-100"
         >
-          Undo (Z)
+          {undecided ? 'Maybe ↓' : 'Next ↓'}
         </button>
         <button
           onClick={() => decide('like')}
-          className="flex w-40 items-center justify-center gap-2 rounded-full bg-stone-900 py-4 text-lg font-medium text-white hover:bg-stone-700"
+          className={`flex w-36 items-center justify-center rounded-full py-4 text-lg font-medium text-white ${
+            liked ? 'bg-rose-600 ring-4 ring-rose-200' : 'bg-stone-900 hover:bg-stone-700'
+          }`}
         >
           ❤️ Like →
         </button>
       </div>
+      <p className="pb-4 text-center text-xs text-stone-400">
+        ← pass · → like · ↓ maybe / next · ↑ back ·{' '}
+        <button onClick={undo} disabled={!history.length} className="underline disabled:no-underline disabled:opacity-50">
+          Z undo
+        </button>
+      </p>
 
-      {(
-        <div className="flex flex-wrap items-center justify-center gap-2 border-t border-stone-200 bg-white px-8 py-3 text-sm">
-          <span className="text-stone-400">Group:</span>
-          {groups.slice(0, 9).map((g, i) => (
-            <button
-              key={g.id}
-              onClick={() => toggleGroup(g)}
-              className="flex items-center gap-2 rounded-full border px-3 py-1"
-              style={
-                photo.groupId === g.id
-                  ? { background: g.color, borderColor: g.color, color: 'white' }
-                  : { borderColor: '#e7e5e4' }
-              }
-            >
-              <kbd className="text-xs opacity-60">{i + 1}</kbd>
-              {g.name}
-            </button>
-          ))}
-          <button onClick={newGroup} className="rounded-full px-3 py-1 text-stone-500 hover:bg-stone-100">
-            + New group
+      <div className="flex flex-wrap items-center justify-center gap-2 border-t border-stone-200 bg-white px-8 py-3 text-sm">
+        <span className="text-stone-400">Group:</span>
+        {groups.slice(0, 9).map((g, i) => (
+          <button
+            key={g.id}
+            onClick={() => toggleGroup(g)}
+            className="flex items-center gap-2 rounded-full border px-3 py-1"
+            style={
+              photo.groupId === g.id
+                ? { background: g.color, borderColor: g.color, color: 'white' }
+                : { borderColor: '#e7e5e4' }
+            }
+          >
+            <kbd className="text-xs opacity-60">{i + 1}</kbd>
+            {g.name}
           </button>
-        </div>
-      )}
+        ))}
+        <button onClick={newGroup} className="rounded-full px-3 py-1 text-stone-500 hover:bg-stone-100">
+          + New group
+        </button>
+      </div>
     </div>
   )
 }
