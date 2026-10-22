@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { addToGroup, createGroup, db, groupsOf, isUndecided, photoUrl, roundPhotos, setRound, toggleGroup, type Group, type Photo } from '../db'
 import type { Tab } from '../App'
 import Lightbox from '../components/Lightbox'
+import ReviewCarousel, { type Move, type MoveKind } from '../components/ReviewCarousel'
 
 interface Props {
   photos: Photo[]
@@ -16,7 +17,12 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
   const list = roundPhotos(photos, round)
   const [currentId, setCurrentId] = useState<number | null>(null)
   const [history, setHistory] = useState<Snapshot[]>([])
-  const [flash, setFlash] = useState<'like' | 'pass' | 'maybe' | null>(null)
+  const [move, setMove] = useState<Move>({ kind: 'next', seq: 0 })
+  // Bumped when a photo is liked or passed, so its card leaves with an animation
+  // and a fresh one takes its place in the carousel.
+  const [generation, setGeneration] = useState<Record<number, number>>({})
+  // The last photo of the round was just decided; let its animation play before the round-done screen.
+  const [finishing, setFinishing] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const busy = useRef(false)
 
@@ -42,47 +48,61 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     return undefined
   }
 
-  const upcoming = photo && nextUndecided(index)
+  /** What Next (or Maybe) moves on to. Shown peeking in on the right. */
+  const incoming = photo && (undecided ? nextUndecided(index) : (list[index + 1] ?? nextUndecided(index)))
+  const previous = index > 0 ? list[index - 1] : undefined
+  const keyOf = (p: Photo) => `${p.id}:${generation[p.id] ?? 0}`
 
-  function animate(kind: 'like' | 'pass' | 'maybe') {
-    setFlash(kind)
-    setTimeout(() => setFlash(null), 250)
+  /** Show another photo, sliding the carousel the right way. `null` falls back to the first undecided photo, or the round-done screen. */
+  function go(kind: MoveKind, id: number | null, leaving?: Photo) {
+    setMove((m) => ({ kind, seq: m.seq + 1, leaving: leaving && keyOf(leaving) }))
+    if (leaving) setGeneration((g) => ({ ...g, [leaving.id]: (g[leaving.id] ?? 0) + 1 }))
+    setCurrentId(id)
   }
 
   async function decide(kind: 'like' | 'pass') {
     if (!photo || busy.current) return
     busy.current = true
     setHistory((h) => [...h.slice(-50), { id: photo.id, level: photo.level, out: photo.out, outRound: photo.outRound }])
-    animate(kind)
+    const following = nextUndecided(index)
+    // Move on before saving, so the card animates away instead of first flashing its new state.
+    go(kind, following?.id ?? photo.id, photo)
+    if (!following) setFinishing(true)
     await db.photos.update(
       photo.id,
       kind === 'like' ? { level: round, out: false, outRound: 0 } : { out: true, outRound: round },
     )
-    // `null` falls back to the first undecided photo, or the round-done screen.
-    setCurrentId(nextUndecided(index)?.id ?? null)
-    busy.current = false
+    if (following) {
+      busy.current = false
+      return
+    }
+    setTimeout(() => {
+      setFinishing(false)
+      setCurrentId(null)
+      busy.current = false
+    }, 500)
   }
 
   /** Maybe on an undecided photo: leave it for later. Next on a decided one: step forward. */
   function next() {
-    if (!photo) return
-    animate('maybe')
-    if (undecided) setCurrentId(nextUndecided(index)?.id ?? photo.id)
-    else setCurrentId(list[index + 1]?.id ?? nextUndecided(index)?.id ?? null)
+    if (!photo || busy.current) return
+    if (incoming) go('next', incoming.id)
+    else if (!undecided) go('next', null)
   }
 
   function back() {
-    if (photo && index > 0) setCurrentId(list[index - 1].id)
+    if (busy.current) return
+    if (photo && previous) go('back', previous.id)
     else if (!photo && list.length) setCurrentId(list[list.length - 1].id)
   }
 
   async function undo() {
     const last = history[history.length - 1]
-    if (!last) return
+    if (!last || busy.current) return
     setHistory((h) => h.slice(0, -1))
     const { id, ...rest } = last
     await db.photos.update(id, rest)
-    setCurrentId(id)
+    go('back', id)
   }
 
   async function toggle(group: Group) {
@@ -172,7 +192,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
   }
 
   const photoGroups = groupsOf(photo, groups)
-  const liked = !photo.out && photo.level >= round
+  // While the last card animates away, the buttons keep looking undecided.
+  const liked = !finishing && !photo.out && photo.level >= round
+  const passed = !finishing && photo.out
 
   return (
     <div className="review-view flex h-full flex-col">
@@ -187,42 +209,34 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         <span className="text-rose-600">❤️ {progress.liked}</span>
       </div>
 
-      <div className="review-photo relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3 sm:p-6">
-        <img
-          key={photo.id}
-          src={photoUrl(photo, 'full')}
-          alt={photo.name}
-          onClick={() => setFullscreen(true)}
-          title="Full screen (F)"
-          className={`max-h-full max-w-full cursor-zoom-in rounded-2xl object-contain shadow-xl transition duration-200 ${
-            flash === 'like'
-              ? 'translate-x-6 opacity-60'
-              : flash === 'pass'
-                ? '-translate-x-6 opacity-60'
-                : flash === 'maybe'
-                  ? 'translate-y-6 opacity-60'
-                  : ''
-          }`}
+      <div className="review-photo relative min-h-0 flex-1 overflow-hidden">
+        <ReviewCarousel
+          prev={previous && !finishing ? { key: keyOf(previous), photo: previous } : undefined}
+          current={finishing ? undefined : { key: keyOf(photo), photo }}
+          next={incoming && !finishing && incoming.id !== previous?.id ? { key: keyOf(incoming), photo: incoming } : undefined}
+          move={move}
+          onBack={back}
+          onNext={next}
+          onOpen={() => setFullscreen(true)}
         />
-        {upcoming && <link rel="preload" as="image" href={photoUrl(upcoming, 'full')} />}
-        {!undecided && (
-          <span
-            className={`absolute top-4 left-4 sm:top-8 sm:left-8 rounded-full px-3 py-1 text-sm font-medium shadow ${
-              liked ? 'bg-stone-900 text-white' : 'bg-white text-stone-600'
-            }`}
-          >
-            {liked ? '❤️ You liked this' : 'You passed on this'} · change it below
-          </span>
-        )}
-        {(photoGroups.length > 0 || photo.labels.length > 0) && (
-          <div className="absolute bottom-4 left-1/2 flex max-w-[90%] -translate-x-1/2 flex-wrap justify-center gap-1 sm:top-8 sm:bottom-auto sm:gap-2">
+        {!finishing && (!undecided || photoGroups.length > 0 || photo.labels.length > 0) && (
+          <div className="pointer-events-none absolute top-6 left-1/2 z-10 flex max-w-[90%] -translate-x-1/2 flex-wrap justify-center gap-1 sm:top-10 sm:gap-2">
+            {!undecided && (
+              <span
+                className={`rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap shadow ${
+                  liked ? 'bg-stone-900 text-white' : 'bg-white text-stone-600'
+                }`}
+              >
+                {liked ? '❤️ You liked this' : 'You passed on this'} · change it below
+              </span>
+            )}
             {photoGroups.map((g) => (
-              <span key={g.id} className="rounded-full px-3 py-1 text-sm font-medium text-white" style={{ background: g.color }}>
+              <span key={g.id} className="rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap text-white shadow" style={{ background: g.color }}>
                 {g.name}
               </span>
             ))}
             {photo.labels.map((l) => (
-              <span key={l} className="rounded-full bg-white/90 px-3 py-1 text-sm shadow">
+              <span key={l} className="rounded-full bg-white/90 px-3 py-1 text-sm whitespace-nowrap shadow">
                 {l}
               </span>
             ))}
@@ -233,7 +247,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
       <div className="review-controls grid grid-cols-4 items-center gap-2 px-3 pb-2 sm:flex sm:justify-center sm:gap-3 sm:px-0">
         <button
           onClick={back}
-          disabled={index <= 0}
+          disabled={!previous}
           className="flex min-h-12 items-center justify-center rounded-full py-3 text-sm sm:w-28 sm:py-4 sm:text-base font-medium text-stone-600 hover:bg-stone-100 disabled:opacity-30"
         >
           <span className="hidden sm:inline">↑&nbsp;</span>Back
@@ -241,7 +255,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         <button
           onClick={() => decide('pass')}
           className={`flex min-h-12 items-center justify-center rounded-full border py-3 text-sm sm:w-36 sm:py-4 sm:text-lg font-medium ${
-            photo.out ? 'border-stone-900 bg-stone-200' : 'border-stone-300 bg-white hover:bg-stone-100'
+            passed ? 'border-stone-900 bg-stone-200' : 'border-stone-300 bg-white hover:bg-stone-100'
           }`}
         >
           <span className="hidden sm:inline">←&nbsp;</span>Pass
@@ -250,7 +264,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           onClick={next}
           className="flex min-h-12 items-center justify-center rounded-full border border-stone-300 bg-white py-3 text-sm sm:w-36 sm:py-4 sm:text-lg font-medium hover:bg-stone-100"
         >
-          {undecided ? 'Maybe' : 'Next'}<span className="hidden sm:inline">&nbsp;↓</span>
+          {undecided || finishing ? 'Maybe' : 'Next'}<span className="hidden sm:inline">&nbsp;↓</span>
         </button>
         <button
           onClick={() => decide('like')}
