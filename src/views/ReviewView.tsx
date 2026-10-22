@@ -219,8 +219,15 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           onNext={next}
           onOpen={() => setFullscreen(true)}
         />
-        {!finishing && (!undecided || photoGroups.length > 0 || photo.labels.length > 0) && (
+        {!finishing && (!undecided || photo.batchName || photoGroups.length > 0 || photo.labels.length > 0) && (
           <div className="pointer-events-none absolute top-6 left-1/2 z-10 flex max-w-[90%] -translate-x-1/2 flex-wrap justify-center gap-1 sm:top-10 sm:gap-2">
+            {photo.batchName && (
+              <div className="w-full text-center">
+                <span className="inline-block max-w-full truncate rounded-full bg-white/95 px-3 py-1 text-sm font-medium text-stone-800 shadow" title={photo.batchName}>
+                  <span className="font-normal text-stone-500">Upload: </span>{photo.batchName}
+                </span>
+              </div>
+            )}
             {!undecided && (
               <span
                 className={`rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap shadow ${
@@ -304,7 +311,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         </button>
       </div>
 
-      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} onClose={() => setFullscreen(false)} />}
+      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} batchName={photo.batchName} onClose={() => setFullscreen(false)} />}
     </div>
   )
 }

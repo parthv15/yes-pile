@@ -31,6 +31,7 @@ export default function AddView({ photos, onFiles, goTo }: Props) {
       <div className="flex flex-col items-center rounded-3xl border-2 border-dashed border-stone-300 bg-white px-4 py-8 sm:px-8 sm:py-16 text-center">
         <p className="font-display text-2xl sm:text-3xl"><span className="sm:hidden">Add your photos</span><span className="hidden sm:inline">Drop photos anywhere</span></p>
         <p className="mt-2 text-stone-500">Vendor shots, screenshots, inspiration. Add as many as you like.</p>
+        <p className="mt-2 text-sm text-stone-500">Give each upload a name, like a vendor, to recognise it while reviewing.</p>
         <div className="mt-6 flex w-full flex-col gap-3 sm:mt-8 sm:w-auto sm:flex-row">
           <button
             onClick={() => filesInput.current?.click()}
@@ -83,7 +84,10 @@ export default function AddView({ photos, onFiles, goTo }: Props) {
           </div>
           <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">
             {recent.slice(0, 48).map((p) => (
-              <img key={p.id} src={photoUrl(p)} alt={p.name} className="aspect-square w-full rounded-lg object-cover" />
+              <figure key={p.id} className="min-w-0">
+                <img src={photoUrl(p)} alt={p.name} className="aspect-square w-full rounded-lg object-cover" />
+                {p.batchName && <figcaption className="mt-1 truncate text-xs text-stone-500" title={p.batchName}>{p.batchName}</figcaption>}
+              </figure>
             ))}
           </div>
           {photos.length > 48 && <p className="mt-2 text-sm text-stone-400">and {photos.length - 48} more</p>}

@@ -89,6 +89,13 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
           </button>
         </div>
 
+        {photo.batchName && (
+          <section className="rounded-xl bg-stone-50 px-4 py-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-400">Upload</h3>
+            <p className="mt-1 break-words text-sm font-medium text-stone-800">{photo.batchName}</p>
+          </section>
+        )}
+
         <div className="flex flex-col gap-2">
           <button
             onClick={() => (photo.theOne ? update({ theOne: false }) : makeTheOne(photo.id))}
@@ -213,7 +220,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
         </div>
       </aside>
 
-      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} onClose={() => setFullscreen(false)} />}
+      {fullscreen && <Lightbox src={photoUrl(photo, 'full')} alt={photo.name} batchName={photo.batchName} onClose={() => setFullscreen(false)} />}
     </div>
   )
 }

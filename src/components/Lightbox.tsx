@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 interface Props {
   src: string
   alt: string
+  batchName?: string
   onClose: () => void
 }
 
@@ -11,7 +12,7 @@ interface Props {
  * fitting the window and its actual size. Esc, F or the ✕ closes it.
  * Other keys pass through, so you can keep liking or flipping photos while it's open.
  */
-export default function Lightbox({ src, alt, onClose }: Props) {
+export default function Lightbox({ src, alt, batchName, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [actualSize, setActualSize] = useState(false)
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null)
@@ -36,6 +37,8 @@ export default function Lightbox({ src, alt, onClose }: Props) {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // A dropped upload can open its naming dialog above the full-screen viewer.
+      if (e.target instanceof Element && e.target.closest('dialog[open]')) return
       if (e.key !== 'Escape' && e.key !== 'f') return
       e.preventDefault()
       e.stopImmediatePropagation()
@@ -87,6 +90,11 @@ export default function Lightbox({ src, alt, onClose }: Props) {
             : `max-w-none ${zoomable ? 'cursor-zoom-in' : 'cursor-default'}`
         }
       />
+      {batchName && (
+        <p className="pointer-events-none fixed top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))] max-w-[calc(100%-6rem)] truncate rounded-full bg-black/70 px-3 py-2 text-sm text-white" title={batchName}>
+          <span className="text-white/70">Upload: </span>{batchName}
+        </p>
+      )}
       <button
         onClick={(e) => {
           e.stopPropagation()
