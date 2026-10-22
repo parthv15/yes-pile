@@ -78,24 +78,26 @@ export default function Lightbox({ src, alt, batchName, photo, onClose }: Props)
         onClose()
       }}
     >
-      <div className="photo-surface relative shrink-0" style={natural ? { width: natural.w * (actualSize ? 1 : scale), height: natural.h * (actualSize ? 1 : scale), margin: actualSize ? 'auto' : undefined } : undefined}>
-        <img
-          src={src}
-          alt={alt}
-          onLoad={(e) => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-          style={actualSize || !natural ? undefined : { width: natural.w * scale, height: natural.h * scale }}
-          onClick={(e) => {
-            e.stopPropagation()
-            if (zoomable) setActualSize(!actualSize)
-          }}
-          className={
-            actualSize
-              ? 'm-auto block max-w-none cursor-zoom-out'
-              : `max-w-none ${zoomable ? 'cursor-zoom-in' : 'cursor-default'}`
-          }
-        />
-        {photo && <StickyNotes photo={photo} />}
-      </div>
+      <img
+        src={src}
+        alt={alt}
+        onLoad={(e) => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+        style={actualSize || !natural ? undefined : { width: natural.w * scale, height: natural.h * scale }}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (zoomable) setActualSize(!actualSize)
+        }}
+        className={
+          actualSize
+            ? 'm-auto block max-w-none cursor-zoom-out'
+            : `max-w-none ${zoomable ? 'cursor-zoom-in' : 'cursor-default'}`
+        }
+      />
+      {photo && (
+        <div className="review-notes pointer-events-none fixed inset-x-3 top-20 bottom-14">
+          <StickyNotes key={photo.id} photo={photo} />
+        </div>
+      )}
       {batchName && (
         <p className="pointer-events-none fixed top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))] max-w-[calc(100%-6rem)] truncate rounded-full bg-black/70 px-3 py-2 text-sm text-white" title={batchName}>
           <span className="text-white/70">Upload: </span>{batchName}

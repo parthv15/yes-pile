@@ -46,7 +46,7 @@ export default function NoteEditor({ draft, onClose }: { draft: NoteDraft; onClo
       className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-sm overflow-y-auto rounded-2xl bg-amber-50 p-5 text-stone-900 shadow-2xl backdrop:bg-stone-950/50">
       <form onSubmit={(e) => { e.preventDefault(); void save() }}>
         <h2 id="note-title" className="font-display text-2xl">{draft.stickyId ? 'Edit note' : 'Add note'}</h2>
-        <p className="mt-2 text-sm text-stone-600">Saved on this photo and in its Notes.</p>
+        <p className="mt-2 text-sm text-stone-600">Linked to this photo and saved in its Notes.</p>
         <label htmlFor="sticky-text" className="sr-only">Note text</label>
         <textarea id="sticky-text" autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={4} maxLength={Math.max(500, draft.text.length)}
           placeholder="What caught your eye?" disabled={saving}

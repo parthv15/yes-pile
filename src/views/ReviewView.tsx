@@ -5,6 +5,7 @@ import Lightbox from '../components/Lightbox'
 import ReviewCarousel, { type Move, type MoveKind } from '../components/ReviewCarousel'
 import ScrollRow from '../components/ScrollRow'
 import NoteEditor, { type NoteDraft } from '../components/NoteEditor'
+import StickyNotes from '../components/StickyNotes'
 
 interface Props {
   photos: Photo[]
@@ -290,10 +291,6 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
       </div>
 
       <div className="review-photo relative min-h-0 flex-1 overflow-hidden">
-        {placingNote && <div role="status" className="absolute inset-x-2 top-1 z-30 flex items-center justify-center gap-2 text-xs">
-          <span className="rounded-full bg-amber-100 px-3 py-2 text-amber-950 shadow-sm">Tap the photo to place a note</span>
-          <button onClick={() => setPlacingNote(false)} className="rounded-full bg-white px-3 py-2 text-stone-600 shadow-sm">Cancel</button>
-        </div>}
         <ReviewCarousel
           prev={previous && !finishing ? { key: keyOf(previous), photo: previous } : undefined}
           current={finishing ? undefined : { key: keyOf(photo), photo }}
@@ -302,10 +299,29 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
           onBack={back}
           onNext={next}
           onOpen={() => setFullscreen(true)}
-          placing={placingNote}
-          onPlace={(position) => { setPlacingNote(false); setNoteDraft({ photoId: photo.id, ...position, text: '' }) }}
-          onEditNote={setNoteDraft}
         />
+        {!finishing && (
+          <div key={photo.id} className="review-notes pointer-events-none absolute inset-3 z-30">
+            <StickyNotes photo={photo} onEdit={placingNote ? undefined : setNoteDraft} />
+          </div>
+        )}
+        {placingNote && <>
+          <button type="button" aria-label="Place note in review area"
+            className="absolute inset-3 z-40 cursor-crosshair rounded-xl ring-2 ring-inset ring-amber-400/70"
+            onClick={(e) => {
+              const box = e.currentTarget.getBoundingClientRect()
+              const position = e.detail === 0 ? { x: 0.5, y: 0.5 } : {
+                x: (e.clientX - box.left) / box.width,
+                y: (e.clientY - box.top) / box.height,
+              }
+              setPlacingNote(false)
+              setNoteDraft({ photoId: photo.id, ...position, text: '' })
+            }} />
+          <div role="status" className="pointer-events-none absolute inset-x-2 top-1 z-50 flex items-center justify-center gap-2 text-xs">
+            <span className="rounded-full bg-amber-100 px-3 py-2 text-amber-950 shadow-sm">Tap anywhere here to place a note</span>
+            <button onClick={() => setPlacingNote(false)} className="pointer-events-auto rounded-full bg-white px-3 py-2 text-stone-600 shadow-sm">Cancel</button>
+          </div>
+        </>}
       </div>
 
       <div className="review-controls grid shrink-0 grid-cols-4 items-center gap-2 border-t border-stone-200 bg-white px-3 pt-3 pb-3 sm:flex sm:justify-center sm:gap-3 sm:px-0 sm:pb-1">

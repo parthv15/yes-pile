@@ -1,4 +1,4 @@
-/** Positions use the available space inside the photo; ranges point into its plain notes. */
+/** Positions use the available space in the review area; ranges point into its plain notes. */
 export interface StickyNote {
   id: string
   x: number

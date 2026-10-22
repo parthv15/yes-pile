@@ -1,7 +1,5 @@
 import { AnimatePresence, MotionConfig, motion, useIsPresent, type Transition, type Variants } from 'motion/react'
-import { type Photo } from '../db'
-import ReviewPhoto from './ReviewPhoto'
-import type { NoteDraft } from './NoteEditor'
+import { photoUrl, type Photo } from '../db'
 
 export type MoveKind = 'like' | 'pass' | 'next' | 'back'
 
@@ -27,9 +25,6 @@ interface Props {
   onBack: () => void
   onNext: () => void
   onOpen: () => void
-  placing?: boolean
-  onPlace: (position: { x: number; y: number }) => void
-  onEditNote: (draft: NoteDraft) => void
 }
 
 type Role = 'prev' | 'current' | 'next'
@@ -48,7 +43,7 @@ const SLIDE: Transition = { type: 'spring', stiffness: 260, damping: 30, mass: 0
  * Cards slide between slots when you go back or forward. A liked card pops with a
  * heart, a passed one swooshes out in a puff of cloud, and the next card takes its place.
  */
-export default function ReviewCarousel({ prev, current, next, move, onBack, onNext, onOpen, placing, onPlace, onEditNote }: Props) {
+export default function ReviewCarousel({ prev, current, next, move, onBack, onNext, onOpen }: Props) {
   const slides: [Role, Slide | undefined][] = [
     ['prev', prev],
     ['current', current],
@@ -68,9 +63,6 @@ export default function ReviewCarousel({ prev, current, next, move, onBack, onNe
                   photo={slide.photo}
                   role={role}
                   move={move}
-                  placing={placing}
-                  onPlace={onPlace}
-                  onEditNote={onEditNote}
                   onClick={role === 'prev' ? onBack : role === 'next' ? onNext : onOpen}
                 />
               ),
@@ -83,7 +75,7 @@ export default function ReviewCarousel({ prev, current, next, move, onBack, onNe
   )
 }
 
-function Card({ slideKey, photo, role, move, onClick, placing, onPlace, onEditNote }: { slideKey: string; photo: Photo; role: Role; move: Move; onClick: () => void; placing?: boolean; onPlace: Props['onPlace']; onEditNote: Props['onEditNote'] }) {
+function Card({ slideKey, photo, role, move, onClick }: { slideKey: string; photo: Photo; role: Role; move: Move; onClick: () => void }) {
   const isPresent = useIsPresent()
   const decided = move.kind === 'like' || move.kind === 'pass'
 
@@ -134,8 +126,10 @@ function Card({ slideKey, photo, role, move, onClick, placing, onPlace, onEditNo
       style={{ zIndex: isPresent ? (role === 'current' ? 2 : 1) : 3 }}
       className="pointer-events-none absolute inset-y-0 left-[15%] flex w-[70%] items-center justify-center sm:left-[22%] sm:w-[56%]"
     >
-      <ReviewPhoto photo={photo} active={role === 'current'} present={isPresent} placing={placing}
-        onClick={onClick} onPlace={onPlace} onEdit={onEditNote} />
+      <img src={photoUrl(photo, 'full')} alt={photo.name} draggable={false} onClick={onClick}
+        data-review-photo={role === 'current' && isPresent ? 'current' : 'neighbor'}
+        title={role === 'current' ? 'Full screen (F)' : role === 'prev' ? 'Back (↑)' : 'Next (↓)'}
+        className={`max-h-full max-w-full rounded-2xl object-contain shadow-xl ${isPresent ? 'pointer-events-auto' : ''} ${role === 'current' ? 'cursor-zoom-in' : 'cursor-pointer'}`} />
     </motion.div>
   )
 }
