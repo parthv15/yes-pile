@@ -13,14 +13,16 @@ interface Props {
   groups: Group[]
   round: number
   goTo: (tab: Tab) => void
+  /** A photo to open on, e.g. one picked from the Maybe tab. */
+  startAt?: number
 }
 
-type Snapshot = Pick<Photo, 'id' | 'level' | 'out' | 'outRound'>
+type Snapshot = Pick<Photo, 'id' | 'level' | 'out' | 'outRound' | 'maybe'>
 
-export default function ReviewView({ photos, groups, round, goTo }: Props) {
+export default function ReviewView({ photos, groups, round, goTo, startAt }: Props) {
   const { decision } = useDecision()
   const list = roundPhotos(photos, round)
-  const [currentId, setCurrentId] = useState<number | null>(null)
+  const [currentId, setCurrentId] = useState<number | null>(startAt ?? null)
   const [history, setHistory] = useState<Snapshot[]>([])
   const [move, setMove] = useState<Move>({ kind: 'next', seq: 0 })
   // Bumped when a photo is liked or passed, so its card leaves with an animation
@@ -33,8 +35,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
   const [placingNote, setPlacingNote] = useState(false)
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null)
 
-  // Show the chosen photo, or else the first one still undecided.
+  // Show the chosen photo, or else the first one still undecided, leaving maybes until last.
   let index = list.findIndex((p) => p.id === currentId)
+  if (index === -1) index = list.findIndex((p) => isUndecided(p, round) && !p.maybe)
   if (index === -1) index = list.findIndex((p) => isUndecided(p, round))
   const photo = index >= 0 ? list[index] : undefined
   const undecided = photo ? isUndecided(photo, round) : false
@@ -54,14 +57,21 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
   }
   const done = progress.liked + progress.passed
 
-  /** The next undecided photo after position i, wrapping around to the start. */
+  /**
+   * The next undecided photo after position i, wrapping around to the start.
+   * Photos you haven't looked at yet come first; maybes come back once they're done.
+   */
   function nextUndecided(i: number) {
-    for (let step = 1; step < list.length; step++) {
-      const p = list[(i + step) % list.length]
-      if (isUndecided(p, round)) return p
+    for (const maybes of [false, true]) {
+      for (let step = 1; step < list.length; step++) {
+        const p = list[(i + step) % list.length]
+        if (isUndecided(p, round) && p.maybe === maybes) return p
+      }
     }
     return undefined
   }
+
+  const snapshot = (p: Photo): Snapshot => ({ id: p.id, level: p.level, out: p.out, outRound: p.outRound, maybe: p.maybe })
 
   /** What Next (or Maybe) moves on to. Shown peeking in on the right. */
   const incoming = photo && (undecided ? nextUndecided(index) : (list[index + 1] ?? nextUndecided(index)))
@@ -78,7 +88,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
   async function decide(kind: 'like' | 'pass') {
     if (!photo || busy.current) return
     busy.current = true
-    setHistory((h) => [...h.slice(-50), { id: photo.id, level: photo.level, out: photo.out, outRound: photo.outRound }])
+    setHistory((h) => [...h.slice(-50), snapshot(photo)])
     const following = nextUndecided(index)
     // Move on before saving, so the card animates away instead of first flashing its new state.
     go(kind, following?.id ?? photo.id, photo)
@@ -86,7 +96,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     await updateVerdicts(
       decision.id,
       [photo.id],
-      kind === 'like' ? { level: round, out: false, outRound: 0 } : { out: true, outRound: round },
+      kind === 'like' ? { level: round, out: false, outRound: 0, maybe: false } : { out: true, outRound: round, maybe: false },
     )
     if (following) {
       busy.current = false
@@ -99,9 +109,13 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     }, 500)
   }
 
-  /** Maybe on an undecided photo: leave it for later. Next on a decided one: step forward. */
+  /** Maybe on an undecided photo: set it aside to decide on later. Next on a decided one: step forward. */
   function next() {
     if (!photo || busy.current) return
+    if (undecided && !photo.maybe) {
+      setHistory((h) => [...h.slice(-50), snapshot(photo)])
+      updateVerdicts(decision.id, [photo.id], { maybe: true })
+    }
     if (incoming) go('next', incoming.id)
     else if (!undecided) go('next', null)
   }
@@ -241,6 +255,12 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
               }`}
             >
               <span className="sm:hidden">{liked ? '❤️ Liked' : 'Passed'}</span><span className="hidden sm:inline">{liked ? '❤️ You liked this' : 'You passed on this'}</span>
+            </span>
+          )}
+          {undecided && photo.maybe && !finishing && (
+            <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 font-medium whitespace-nowrap text-amber-800">
+              <span className="sm:hidden">Maybe</span>
+              <span className="hidden sm:inline">You said maybe</span>
             </span>
           )}
           {photo.labels.map((l) => (

@@ -43,6 +43,8 @@ export interface VerdictState {
   out: boolean
   /** The round it was passed on in. */
   outRound: number
+  /** Set aside with Maybe, to decide on later in the round. */
+  maybe: boolean
   /** A photo can be in several groups; it's still stored once. */
   groupIds: number[]
   yes: boolean
@@ -137,7 +139,7 @@ db.version(3)
 // v4: the round counter now lives on each decision.
 db.version(4).stores({ meta: null })
 
-const FRESH: VerdictState = { level: 0, out: false, outRound: 0, groupIds: [], yes: false, theOne: false }
+const FRESH: VerdictState = { level: 0, out: false, outRound: 0, maybe: false, groupIds: [], yes: false, theOne: false }
 
 /** The board's photos as the decision sees them. Photos it hasn't judged yet come in fresh. */
 export function withVerdicts(photos: StoredPhoto[], verdicts: Verdict[]): Photo[] {
@@ -149,6 +151,7 @@ export function withVerdicts(photos: StoredPhoto[], verdicts: Verdict[]): Photo[
       level: verdict?.level ?? FRESH.level,
       out: verdict?.out ?? FRESH.out,
       outRound: verdict?.outRound ?? FRESH.outRound,
+      maybe: verdict?.maybe ?? FRESH.maybe,
       groupIds: verdict?.groupIds ?? FRESH.groupIds,
       yes: verdict?.yes ?? FRESH.yes,
       theOne: verdict?.theOne ?? FRESH.theOne,
@@ -208,7 +211,7 @@ export async function deleteDecision(decisionId: number) {
 /** Put every photo back in the running for this decision, from round 1. Groups are kept. */
 export async function startDecisionOver(decisionId: number) {
   await db.transaction('rw', db.decisions, db.verdicts, async () => {
-    await db.verdicts.where('decisionId').equals(decisionId).modify({ level: 0, out: false, outRound: 0, yes: false, theOne: false })
+    await db.verdicts.where('decisionId').equals(decisionId).modify({ level: 0, out: false, outRound: 0, maybe: false, yes: false, theOne: false })
     await db.decisions.update(decisionId, { round: 1 })
   })
 }
@@ -290,6 +293,11 @@ export function allLabels(photos: Photo[]) {
   return [...new Set(photos.flatMap((p) => p.labels))].sort((a, b) => a.localeCompare(b))
 }
 
+/** Photos set aside with Maybe that still need deciding this round. */
+export function maybePhotos(photos: Photo[], round: number) {
+  return photos.filter((p) => p.maybe && isUndecided(p, round)).sort((a, b) => a.addedAt - b.addedAt)
+}
+
 /** Photos passed on, most recent round first. */
 export function passedPhotos(photos: Photo[]) {
   return photos.filter((p) => p.out).sort((a, b) => b.outRound - a.outRound || a.addedAt - b.addedAt)
@@ -297,7 +305,17 @@ export function passedPhotos(photos: Photo[]) {
 
 /** Pass on photos outside of review, e.g. from Liked. They count as passed in the current round. */
 export async function passPhotos(decision: Decision, ids: number[]) {
-  await updateVerdicts(decision.id, ids, { out: true, outRound: decision.round, yes: false, theOne: false })
+  await updateVerdicts(decision.id, ids, { out: true, outRound: decision.round, maybe: false, yes: false, theOne: false })
+}
+
+/** Like photos outside of review, e.g. from Maybe. They count as liked in the current round. */
+export async function likePhotos(decision: Decision, ids: number[]) {
+  await updateVerdicts(decision.id, ids, (p) => {
+    p.level = Math.max(p.level, decision.round)
+    p.out = false
+    p.outRound = 0
+    p.maybe = false
+  })
 }
 
 /** Change your mind about passed photos: they count as liked in the round you passed them in. */
@@ -306,6 +324,7 @@ export async function bringBack(decisionId: number, ids: number[]) {
     p.level = Math.max(p.level, p.outRound)
     p.out = false
     p.outRound = 0
+    p.maybe = false
   })
 }
 
@@ -316,7 +335,7 @@ export async function makeTheOne(decisionId: number, photoId: number) {
       .equals(decisionId)
       .filter((p) => p.theOne)
       .modify({ theOne: false, yes: true })
-    await updateVerdicts(decisionId, [photoId], { theOne: true, out: false })
+    await updateVerdicts(decisionId, [photoId], { theOne: true, out: false, maybe: false })
   })
 }
 

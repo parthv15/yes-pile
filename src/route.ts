@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
-export type Tab = 'add' | 'review' | 'pile' | 'passed' | 'yes'
-const TABS: Tab[] = ['add', 'review', 'pile', 'passed', 'yes']
+export type Tab = 'add' | 'review' | 'pile' | 'maybe' | 'passed' | 'yes'
+const TABS: Tab[] = ['add', 'review', 'pile', 'maybe', 'passed', 'yes']
 
 /** Where you are: all boards, one board, or a decision inside it (optionally on a tab). */
 export type Route =

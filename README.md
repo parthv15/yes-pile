@@ -14,10 +14,11 @@ Inside a decision:
 
 1. **Add photos.** Photos you add join the board, so every decision on it sees them. Drop them anywhere on the page, or choose files or a whole folder. Give that upload an optional name (for example, a flower vendor) before adding it. Every photo in the batch keeps that name, visible during review, in full screen, on photo cards, in photo details, and in the exported notes. Leave it blank to import without a name. Upload names are separate from photo labels; filtering by upload is not included yet.
 2. **Review in rounds.** Like or pass on each photo. The photos before and after it peek in from the sides; click one to step to it. When a round is done, start the next one with only the photos you liked. Repeat until you're down to a few.
-3. **Look again at what you passed.** The **Passed** tab shows every photo you passed on, round by round. Bring any back and it rejoins your liked photos.
-4. **Group and label.** In **Liked**, sort photos into groups. A photo can be in several groups at once; it's still one photo, so liking or picking it shows in every group. Groups belong to the decision; labels and notes belong to the photo, so they show in every decision. Drag a photo onto a group to add it there, or select several and use **Groups…**. Add labels and notes too.
-5. **Decide.** Open a photo and choose **THE ONE!** or **Add to Yes Pile**.
-6. **Keep it.** The **Yes Pile** tab shows THE ONE and everything else you said yes to. Download it all as a zip.
+3. **Come back to your maybes.** Not sure about a photo? Press **Maybe** to set it aside. Review shows you everything else first, then brings your maybes back. The **Maybe** tab lists them too, so you can like or pass them there or open one in review. A round finishes once every maybe is liked or passed.
+4. **Look again at what you passed.** The **Passed** tab shows every photo you passed on, round by round. Bring any back and it rejoins your liked photos.
+5. **Group and label.** In **Liked**, sort photos into groups. A photo can be in several groups at once; it's still one photo, so liking or picking it shows in every group. Groups belong to the decision; labels and notes belong to the photo, so they show in every decision. Drag a photo onto a group to add it there, or select several and use **Groups…**. Add labels and notes too.
+6. **Decide.** Open a photo and choose **THE ONE!** or **Add to Yes Pile**.
+7. **Keep it.** The **Yes Pile** tab shows THE ONE and everything else you said yes to. Download it all as a zip.
 
 ### On a phone or tablet
 
@@ -29,7 +30,7 @@ Use **Choose photos** to import from your photo library. On phones, the tabs sit
 | --- | --- |
 | `→` or `L` | Like |
 | `←` or `P` | Pass |
-| `↓` or `M` | Maybe: skip for now (or Next on a photo you've already decided) |
+| `↓` or `M` | Maybe: set aside to decide later (or Next on a photo you've already decided) |
 | `↑` or `B` | Back to the previous photo |
 | `Z` or `Backspace` | Undo |
 | `N` | Place a text note anywhere in the review area |
