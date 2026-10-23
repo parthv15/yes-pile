@@ -8,10 +8,14 @@ Built for sorting through wedding vendor photos, but it works for any pile of pi
 
 ## How it works
 
-1. **Add photos.** Drop them anywhere on the page, or choose files or a whole folder. Give that upload an optional name (for example, a flower vendor) before adding it. Every photo in the batch keeps that name, visible during review, in full screen, on photo cards, in photo details, and in the exported notes. Leave it blank to import without a name. Upload names are separate from photo labels; filtering by upload is not included yet.
+Photos live on **boards**, one for each big thing, like "Our wedding". On a board, make a **decision** for each thing you're choosing ("Venue", "Mehendi outfit", "Photographer"). Every decision on a board works from the same photos, but has its own rounds, groups, Yes Pile and THE ONE, so a photo can be a yes for one decision and a pass for another. When you've found THE ONE, head back to the board and start the next decision.
+
+Inside a decision:
+
+1. **Add photos.** Photos you add join the board, so every decision on it sees them. Drop them anywhere on the page, or choose files or a whole folder. Give that upload an optional name (for example, a flower vendor) before adding it. Every photo in the batch keeps that name, visible during review, in full screen, on photo cards, in photo details, and in the exported notes. Leave it blank to import without a name. Upload names are separate from photo labels; filtering by upload is not included yet.
 2. **Review in rounds.** Like or pass on each photo. The photos before and after it peek in from the sides; click one to step to it. When a round is done, start the next one with only the photos you liked. Repeat until you're down to a few.
 3. **Look again at what you passed.** The **Passed** tab shows every photo you passed on, round by round. Bring any back and it rejoins your liked photos.
-4. **Group and label.** In **Liked**, sort photos into groups. A photo can be in several groups at once; it's still one photo, so liking, labelling or picking it shows everywhere. Drag a photo onto a group to add it there, or select several and use **Groups…**. Add labels and notes too.
+4. **Group and label.** In **Liked**, sort photos into groups. A photo can be in several groups at once; it's still one photo, so liking or picking it shows in every group. Groups belong to the decision; labels and notes belong to the photo, so they show in every decision. Drag a photo onto a group to add it there, or select several and use **Groups…**. Add labels and notes too.
 5. **Decide.** Open a photo and choose **THE ONE!** or **Add to Yes Pile**.
 6. **Keep it.** The **Yes Pile** tab shows THE ONE and everything else you said yes to. Download it all as a zip.
 

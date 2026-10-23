@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Lightbox from './Lightbox'
-import { addToGroup, bringBack, createGroup, db, toggleGroup, deletePhotos, makeTheOne, passPhotos, photoUrl, savePhotoNote, type Group, type Photo } from '../db'
+import { addToGroup, bringBack, createGroup, toggleGroup, deletePhotos, makeTheOne, passPhotos, photoUrl, savePhotoNote, updatePhoto, updateVerdicts, type Group, type Photo, type VerdictState } from '../db'
+import { useDecision } from '../decision'
 
 interface Props {
   photo: Photo
@@ -15,6 +16,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
   const [labelDraft, setLabelDraft] = useState('')
   const [note, setNote] = useState(photo.note)
   const [fullscreen, setFullscreen] = useState(false)
+  const { decision } = useDecision()
 
   useEffect(() => setNote(photo.note), [photo.id, photo.note])
 
@@ -35,17 +37,17 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose, onPrev, onNext])
 
-  const update = (changes: Partial<Photo>) => db.photos.update(photo.id, changes)
+  const judge = (changes: Partial<VerdictState>) => updateVerdicts(decision.id, [photo.id], changes)
 
   function addLabel(raw: string) {
     const label = raw.trim()
-    if (label && !photo.labels.includes(label)) update({ labels: [...photo.labels, label] })
+    if (label && !photo.labels.includes(label)) updatePhoto(photo.id, { labels: [...photo.labels, label] })
     setLabelDraft('')
   }
 
   async function newGroup() {
     const name = prompt('Name the new group')?.trim()
-    if (name) await addToGroup([photo.id], await createGroup(name))
+    if (name) await addToGroup(decision.id, [photo.id], await createGroup(decision.id, name))
   }
 
   const suggestions = labels.filter((l) => !photo.labels.includes(l))
@@ -98,7 +100,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
 
         <div className="flex flex-col gap-2">
           <button
-            onClick={() => (photo.theOne ? update({ theOne: false }) : makeTheOne(photo.id))}
+            onClick={() => (photo.theOne ? judge({ theOne: false }) : makeTheOne(decision.id, photo.id))}
             className={`rounded-xl py-4 font-display text-2xl font-bold transition ${
               photo.theOne ? 'bg-rose-500 text-white' : 'border-2 border-rose-500 text-rose-600 hover:bg-rose-50'
             }`}
@@ -106,7 +108,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
             {photo.theOne ? '❤️ THE ONE ❤️' : 'THE ONE!'}
           </button>
           <button
-            onClick={() => update({ yes: !photo.yes, out: false })}
+            onClick={() => judge({ yes: !photo.yes, out: false })}
             className={`rounded-xl py-3 font-medium transition ${
               photo.yes ? 'bg-stone-900 text-white' : 'border border-stone-300 hover:bg-stone-100'
             }`}
@@ -121,7 +123,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
             {groups.map((g) => (
               <button
                 key={g.id}
-                onClick={() => toggleGroup(photo, g.id)}
+                onClick={() => toggleGroup(decision.id, photo, g.id)}
                 className="min-h-11 max-w-full break-words rounded-full border px-3 py-1 text-sm"
                 style={
                   photo.groupIds.includes(g.id)
@@ -145,7 +147,7 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
               <span key={l} className="flex items-center gap-1 rounded-full bg-stone-100 py-1 pr-2 pl-3 text-sm">
                 {l}
                 <button
-                  onClick={() => update({ labels: photo.labels.filter((x) => x !== l) })}
+                  onClick={() => updatePhoto(photo.id, { labels: photo.labels.filter((x) => x !== l) })}
                   className="text-stone-400 hover:text-stone-900"
                 >
                   ✕
@@ -196,12 +198,12 @@ export default function PhotoModal({ photo, groups, labels, onClose, onPrev, onN
 
         <div className="mt-auto flex flex-wrap gap-2 border-t border-stone-200 pt-4 text-sm">
           {photo.out ? (
-            <button onClick={() => bringBack([photo.id])} className="rounded-full border border-stone-300 px-4 py-2 hover:bg-stone-100">
+            <button onClick={() => bringBack(decision.id, [photo.id])} className="rounded-full border border-stone-300 px-4 py-2 hover:bg-stone-100">
               Bring back
             </button>
           ) : (
             <button
-              onClick={() => passPhotos([photo.id])}
+              onClick={() => passPhotos(decision, [photo.id])}
               className="rounded-full border border-stone-300 px-4 py-2 hover:bg-stone-100"
             >
               Pass on this one

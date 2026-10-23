@@ -1,5 +1,6 @@
-import { useRef } from 'react'
-import { db, deletePhotos, photoUrl, setRound, type Photo } from '../db'
+import { deletePhotos, photoUrl, startDecisionOver, type Photo } from '../db'
+import { useDecision } from '../decision'
+import PhotoPicker from '../components/PhotoPicker'
 import type { Tab } from '../App'
 
 interface Props {
@@ -9,21 +10,17 @@ interface Props {
 }
 
 export default function AddView({ photos, onFiles, goTo }: Props) {
-  const filesInput = useRef<HTMLInputElement>(null)
-  const folderInput = useRef<HTMLInputElement>(null)
   const recent = [...photos].sort((a, b) => b.addedAt - a.addedAt)
+  const { board, decision } = useDecision()
 
   async function startOver() {
-    if (!confirm('Put every photo back in the running and start again from round 1? Groups and labels are kept.')) return
-    await db.photos.toCollection().modify({ level: 0, out: false, outRound: 0, yes: false, theOne: false })
-    await setRound(1)
+    if (!confirm(`Put every photo back in the running for ${decision.name} and start again from round 1? Groups and labels are kept.`)) return
+    await startDecisionOver(decision.id)
   }
 
   async function deleteEverything() {
-    if (!confirm(`Delete all ${photos.length} photos, groups and labels? This can't be undone.`)) return
+    if (!confirm(`Delete all ${photos.length} photos from ${board.name}? They'll be gone from every decision in it. This can't be undone.`)) return
     await deletePhotos(photos.map((p) => p.id))
-    await db.groups.clear()
-    await setRound(1)
   }
 
   return (
@@ -32,41 +29,8 @@ export default function AddView({ photos, onFiles, goTo }: Props) {
         <p className="font-display text-2xl sm:text-3xl"><span className="sm:hidden">Add your photos</span><span className="hidden sm:inline">Drop photos anywhere</span></p>
         <p className="mt-2 text-stone-500">Vendor shots, screenshots, inspiration. Add as many as you like.</p>
         <p className="mt-2 text-sm text-stone-500">Give each upload a name, like a vendor, to recognise it while reviewing.</p>
-        <div className="mt-6 flex w-full flex-col gap-3 sm:mt-8 sm:w-auto sm:flex-row">
-          <button
-            onClick={() => filesInput.current?.click()}
-            className="rounded-full bg-stone-900 px-6 py-3 font-medium text-white hover:bg-stone-700"
-          >
-            Choose photos
-          </button>
-          <button
-            onClick={() => folderInput.current?.click()}
-            className="rounded-full border border-stone-300 px-6 py-3 font-medium hover:bg-stone-100"
-          >
-            Choose a folder
-          </button>
-        </div>
-        <input
-          ref={filesInput}
-          type="file"
-          accept="image/*"
-          multiple
-          hidden
-          onChange={(e) => {
-            onFiles([...(e.target.files ?? [])])
-            e.target.value = ''
-          }}
-        />
-        <input
-          ref={folderInput}
-          type="file"
-          hidden
-          {...{ webkitdirectory: '' }}
-          onChange={(e) => {
-            onFiles([...(e.target.files ?? [])])
-            e.target.value = ''
-          }}
-        />
+        <p className="mt-2 text-sm text-stone-500">Photos you add are shared by every decision in <b className="font-medium text-stone-700">{board.name}</b>.</p>
+        <PhotoPicker onFiles={onFiles} className="mt-6 w-full sm:mt-8 sm:w-auto" />
         <p className="mt-6 text-xs text-stone-400">
           Photos stay in this browser only. Nothing is uploaded anywhere.
         </p>
@@ -100,7 +64,7 @@ export default function AddView({ photos, onFiles, goTo }: Props) {
               onClick={deleteEverything}
               className="rounded-full border border-rose-200 px-4 py-2 text-rose-600 hover:bg-rose-50"
             >
-              Delete everything
+              Delete all photos
             </button>
           </div>
         </>

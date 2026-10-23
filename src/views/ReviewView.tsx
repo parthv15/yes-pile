@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { addToGroup, createGroup, db, isUndecided, photoUrl, roundPhotos, setRound, toggleGroup, type Group, type Photo } from '../db'
+import { addToGroup, createGroup, isUndecided, photoUrl, roundPhotos, setRound, toggleGroup, updateVerdicts, type Group, type Photo } from '../db'
+import { useDecision } from '../decision'
 import type { Tab } from '../App'
 import Lightbox from '../components/Lightbox'
 import ReviewCarousel, { type Move, type MoveKind } from '../components/ReviewCarousel'
@@ -17,6 +18,7 @@ interface Props {
 type Snapshot = Pick<Photo, 'id' | 'level' | 'out' | 'outRound'>
 
 export default function ReviewView({ photos, groups, round, goTo }: Props) {
+  const { decision } = useDecision()
   const list = roundPhotos(photos, round)
   const [currentId, setCurrentId] = useState<number | null>(null)
   const [history, setHistory] = useState<Snapshot[]>([])
@@ -81,8 +83,9 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     // Move on before saving, so the card animates away instead of first flashing its new state.
     go(kind, following?.id ?? photo.id, photo)
     if (!following) setFinishing(true)
-    await db.photos.update(
-      photo.id,
+    await updateVerdicts(
+      decision.id,
+      [photo.id],
       kind === 'like' ? { level: round, out: false, outRound: 0 } : { out: true, outRound: round },
     )
     if (following) {
@@ -114,19 +117,19 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
     if (!last || busy.current) return
     setHistory((h) => h.slice(0, -1))
     const { id, ...rest } = last
-    await db.photos.update(id, rest)
+    await updateVerdicts(decision.id, [id], rest)
     go('back', id)
   }
 
   async function toggle(group: Group) {
-    if (photo) await toggleGroup(photo, group.id)
+    if (photo) await toggleGroup(decision.id, photo, group.id)
   }
 
   async function newGroup() {
     if (!photo) return
     const name = prompt('Name the new group (e.g. "Florals" or "Studio Aurora")')?.trim()
     if (!name) return
-    await addToGroup([photo.id], await createGroup(name))
+    await addToGroup(decision.id, [photo.id], await createGroup(decision.id, name))
   }
 
   // Keyboard shortcuts. Re-bound each render so handlers see the latest photo.
@@ -182,7 +185,7 @@ export default function ReviewView({ photos, groups, round, goTo }: Props) {
         <div className="mt-6 flex flex-wrap justify-center gap-3 sm:mt-8">
           {stillIn > 1 && (
             <button
-              onClick={() => setRound(round + 1)}
+              onClick={() => setRound(decision.id, round + 1)}
               className="rounded-full bg-stone-900 px-6 py-3 font-medium text-white hover:bg-stone-700"
             >
               Start round {round + 1} →

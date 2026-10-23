@@ -1,8 +1,26 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { appendStickyNote, changePhotoNote, deleteStickyNote, editStickyNote, clampPosition, type StickyNote } from './photoNotes'
 
-export interface Photo {
+/** A set of photos you're choosing from, like "Our wedding". Each board holds several decisions. */
+export interface Board {
   id: number
+  name: string
+  createdAt: number
+}
+
+/** One choice made from a board's photos, like "Mehendi outfit": its own rounds, groups and THE ONE. */
+export interface Decision {
+  id: number
+  boardId: number
+  name: string
+  createdAt: number
+  round: number
+}
+
+/** A photo as stored: the file and what's true of it whichever decision you're in. */
+export interface StoredPhoto {
+  id: number
+  boardId: number
   name: string
   blob: Blob
   thumb: Blob
@@ -11,6 +29,14 @@ export interface Photo {
   batchId?: string
   /** Optional source/vendor name, separate from editable photo labels and groups. */
   batchName?: string
+  labels: string[]
+  note: string
+  /** Optional placement metadata; sticky text lives in note, without a second copy. */
+  stickyNotes?: StickyNote[]
+}
+
+/** What one decision has made of a photo. */
+export interface VerdictState {
   /** Number of rounds this photo has been liked in. 0 = not reviewed yet. */
   level: number
   /** Passed on during review. */
@@ -19,29 +45,32 @@ export interface Photo {
   outRound: number
   /** A photo can be in several groups; it's still stored once. */
   groupIds: number[]
-  labels: string[]
-  note: string
-  /** Optional placement metadata; sticky text lives in note, without a second copy. */
-  stickyNotes?: StickyNote[]
   yes: boolean
   theOne: boolean
 }
 
+/** A decision's verdict on a photo. A photo with no verdict yet hasn't been looked at in that decision. */
+export interface Verdict extends VerdictState {
+  decisionId: number
+  photoId: number
+}
+
+/** A photo as seen in the decision you're working on. */
+export type Photo = StoredPhoto & VerdictState
+
 export interface Group {
   id: number
+  decisionId: number
   name: string
   color: string
 }
 
-interface Meta {
-  key: string
-  value: number
-}
-
 export const db = new Dexie('yes-pile') as Dexie & {
-  photos: EntityTable<Photo, 'id'>
+  boards: EntityTable<Board, 'id'>
+  decisions: EntityTable<Decision, 'id'>
+  photos: EntityTable<StoredPhoto, 'id'>
+  verdicts: Dexie.Table<Verdict, [number, number]>
   groups: EntityTable<Group, 'id'>
-  meta: EntityTable<Meta, 'key'>
 }
 
 db.version(1).stores({
@@ -63,14 +92,135 @@ db.version(2)
       }),
   )
 
+// v3: boards and decisions. Photos belong to a board; how each decision has judged
+// a photo moves into verdicts. Photos from before boards land in one board and decision.
+db.version(3)
+  .stores({
+    boards: '++id',
+    decisions: '++id, boardId',
+    photos: '++id, addedAt, boardId',
+    verdicts: '[decisionId+photoId], decisionId, photoId',
+    groups: '++id, decisionId',
+  })
+  .upgrade(async (tx) => {
+    const photos = await tx.table('photos').toArray()
+    const groups = await tx.table('groups').toArray()
+    if (!photos.length && !groups.length) return
+    const now = Date.now()
+    const round = (await tx.table('meta').get('round'))?.value ?? 1
+    const boardId = await tx.table('boards').add({ name: 'My board', createdAt: now })
+    const decisionId = await tx.table('decisions').add({ boardId, name: 'First decision', createdAt: now, round })
+    await tx.table('verdicts').bulkAdd(
+      photos.map((p) => ({
+        decisionId,
+        photoId: p.id,
+        level: p.level ?? 0,
+        out: p.out ?? false,
+        outRound: p.outRound ?? 0,
+        groupIds: p.groupIds ?? [],
+        yes: p.yes ?? false,
+        theOne: p.theOne ?? false,
+      })),
+    )
+    await tx
+      .table('photos')
+      .toCollection()
+      .modify((p) => {
+        p.boardId = boardId
+        for (const key of ['level', 'out', 'outRound', 'groupIds', 'yes', 'theOne']) delete p[key]
+      })
+    await tx.table('groups').toCollection().modify((g) => {
+      g.decisionId = decisionId
+    })
+  })
+
+// v4: the round counter now lives on each decision.
+db.version(4).stores({ meta: null })
+
+const FRESH: VerdictState = { level: 0, out: false, outRound: 0, groupIds: [], yes: false, theOne: false }
+
+/** The board's photos as the decision sees them. Photos it hasn't judged yet come in fresh. */
+export function withVerdicts(photos: StoredPhoto[], verdicts: Verdict[]): Photo[] {
+  const byPhoto = new Map(verdicts.map((p) => [p.photoId, p]))
+  return photos.map((photo) => {
+    const verdict = byPhoto.get(photo.id)
+    return {
+      ...photo,
+      level: verdict?.level ?? FRESH.level,
+      out: verdict?.out ?? FRESH.out,
+      outRound: verdict?.outRound ?? FRESH.outRound,
+      groupIds: verdict?.groupIds ?? FRESH.groupIds,
+      yes: verdict?.yes ?? FRESH.yes,
+      theOne: verdict?.theOne ?? FRESH.theOne,
+    }
+  })
+}
+
+/** Change what a decision has made of some photos, creating their verdicts if needed. */
+export async function updateVerdicts(
+  decisionId: number,
+  photoIds: number[],
+  change: Partial<VerdictState> | ((verdict: VerdictState) => void),
+) {
+  await db.transaction('rw', db.verdicts, async () => {
+    const keys = photoIds.map((photoId): [number, number] => [decisionId, photoId])
+    const existing = await db.verdicts.bulkGet(keys)
+    const verdicts = photoIds.map((photoId, i) => {
+      const verdict: Verdict = { ...FRESH, groupIds: [...FRESH.groupIds], ...existing[i], decisionId, photoId }
+      if (typeof change === 'function') change(verdict)
+      else Object.assign(verdict, change)
+      return verdict
+    })
+    await db.verdicts.bulkPut(verdicts)
+  })
+}
+
+/** Update what's true of photos in every decision: labels, notes and the like. */
+export async function updatePhoto(id: number, changes: Partial<Pick<StoredPhoto, 'labels' | 'note' | 'name'>>) {
+  await db.photos.update(id, changes)
+}
+
+export async function createBoard(name: string) {
+  return db.boards.add({ name, createdAt: Date.now() } as Board)
+}
+
+export async function createDecision(boardId: number, name: string) {
+  return db.decisions.add({ boardId, name, createdAt: Date.now(), round: 1 } as Decision)
+}
+
+/** A board, its photos, and every decision made from them. */
+export async function deleteBoard(boardId: number) {
+  const decisionIds = await db.decisions.where('boardId').equals(boardId).primaryKeys()
+  await Promise.all(decisionIds.map(deleteDecision))
+  await deletePhotos(await db.photos.where('boardId').equals(boardId).primaryKeys())
+  await db.boards.delete(boardId)
+}
+
+/** A decision and its verdicts and groups. The board's photos stay. */
+export async function deleteDecision(decisionId: number) {
+  await db.transaction('rw', db.decisions, db.verdicts, db.groups, async () => {
+    await db.verdicts.where('decisionId').equals(decisionId).delete()
+    await db.groups.where('decisionId').equals(decisionId).delete()
+    await db.decisions.delete(decisionId)
+  })
+}
+
+/** Put every photo back in the running for this decision, from round 1. Groups are kept. */
+export async function startDecisionOver(decisionId: number) {
+  await db.transaction('rw', db.decisions, db.verdicts, async () => {
+    await db.verdicts.where('decisionId').equals(decisionId).modify({ level: 0, out: false, outRound: 0, yes: false, theOne: false })
+    await db.decisions.update(decisionId, { round: 1 })
+  })
+}
+
 export const GROUP_COLORS = [
   '#e11d48', '#ea580c', '#ca8a04', '#16a34a', '#0891b2',
   '#2563eb', '#7c3aed', '#c026d3', '#57534e',
 ]
 
-export async function createGroup(name: string) {
-  const count = await db.groups.count()
-  return db.groups.add({ name, color: GROUP_COLORS[count % GROUP_COLORS.length] })
+export async function createGroup(decisionId: number, name: string) {
+  const count = await db.groups.where('decisionId').equals(decisionId).count()
+  return db.groups.add({ decisionId, name, color: GROUP_COLORS[count % GROUP_COLORS.length] } as Group)
 }
 
 /** The groups a photo is in, in the order the groups were made. */
@@ -78,37 +228,35 @@ export function groupsOf(photo: Photo, groups: Group[]) {
   return groups.filter((g) => photo.groupIds.includes(g.id))
 }
 
-export async function toggleGroup(photo: Photo, groupId: number) {
-  const groupIds = photo.groupIds.includes(groupId)
-    ? photo.groupIds.filter((id) => id !== groupId)
-    : [...photo.groupIds, groupId]
-  await db.photos.update(photo.id, { groupIds })
+export async function toggleGroup(decisionId: number, photo: Photo, groupId: number) {
+  await updateVerdicts(decisionId, [photo.id], (p) => {
+    p.groupIds = p.groupIds.includes(groupId) ? p.groupIds.filter((id) => id !== groupId) : [...p.groupIds, groupId]
+  })
 }
 
-export async function addToGroup(ids: number[], groupId: number) {
-  await db.photos
-    .where('id')
-    .anyOf(ids)
-    .modify((p) => {
-      if (!p.groupIds.includes(groupId)) p.groupIds.push(groupId)
+export async function addToGroup(decisionId: number, ids: number[], groupId: number) {
+  await updateVerdicts(decisionId, ids, (p) => {
+    if (!p.groupIds.includes(groupId)) p.groupIds = [...p.groupIds, groupId]
+  })
+}
+
+export async function removeFromGroup(decisionId: number, ids: number[], groupId: number) {
+  await updateVerdicts(decisionId, ids, (p) => {
+    p.groupIds = p.groupIds.filter((id) => id !== groupId)
+  })
+}
+
+export async function deleteGroup(group: Group) {
+  await db.transaction('rw', db.verdicts, db.groups, async () => {
+    await db.verdicts.where('decisionId').equals(group.decisionId).modify((p) => {
+      p.groupIds = p.groupIds.filter((id) => id !== group.id)
     })
+    await db.groups.delete(group.id)
+  })
 }
 
-export async function removeFromGroup(ids: number[], groupId: number) {
-  await db.photos
-    .where('id')
-    .anyOf(ids)
-    .modify((p) => {
-      p.groupIds = p.groupIds.filter((id) => id !== groupId)
-    })
-}
-
-export async function getRound(): Promise<number> {
-  return (await db.meta.get('round'))?.value ?? 1
-}
-
-export async function setRound(value: number) {
-  await db.meta.put({ key: 'round', value })
+export async function setRound(decisionId: number, round: number) {
+  await db.decisions.update(decisionId, { round })
 }
 
 /** Photos still in the running for the current round, oldest round first. */
@@ -148,32 +296,36 @@ export function passedPhotos(photos: Photo[]) {
 }
 
 /** Pass on photos outside of review, e.g. from Liked. They count as passed in the current round. */
-export async function passPhotos(ids: number[]) {
-  const outRound = await getRound()
-  await db.photos.where('id').anyOf(ids).modify({ out: true, outRound, yes: false, theOne: false })
+export async function passPhotos(decision: Decision, ids: number[]) {
+  await updateVerdicts(decision.id, ids, { out: true, outRound: decision.round, yes: false, theOne: false })
 }
 
 /** Change your mind about passed photos: they count as liked in the round you passed them in. */
-export async function bringBack(ids: number[]) {
-  await db.photos
-    .where('id')
-    .anyOf(ids)
-    .modify((p) => {
-      p.level = Math.max(p.level, p.outRound)
-      p.out = false
-      p.outRound = 0
-    })
-}
-
-export async function makeTheOne(id: number) {
-  await db.transaction('rw', db.photos, async () => {
-    await db.photos.filter((p) => p.theOne).modify({ theOne: false, yes: true })
-    await db.photos.update(id, { theOne: true, out: false })
+export async function bringBack(decisionId: number, ids: number[]) {
+  await updateVerdicts(decisionId, ids, (p) => {
+    p.level = Math.max(p.level, p.outRound)
+    p.out = false
+    p.outRound = 0
   })
 }
 
+export async function makeTheOne(decisionId: number, photoId: number) {
+  await db.transaction('rw', db.verdicts, async () => {
+    await db.verdicts
+      .where('decisionId')
+      .equals(decisionId)
+      .filter((p) => p.theOne)
+      .modify({ theOne: false, yes: true })
+    await updateVerdicts(decisionId, [photoId], { theOne: true, out: false })
+  })
+}
+
+/** Delete photos from their board, and from every decision made from it. */
 export async function deletePhotos(ids: number[]) {
-  await db.photos.bulkDelete(ids)
+  await db.transaction('rw', db.photos, db.verdicts, async () => {
+    await db.verdicts.where('photoId').anyOf(ids).delete()
+    await db.photos.bulkDelete(ids)
+  })
   ids.forEach(forgetUrls)
 }
 
@@ -181,7 +333,7 @@ export async function deletePhotos(ids: number[]) {
 // database changes. A photo's blobs never change, so the cache never goes stale.
 const urlCache = new Map<string, string>()
 
-export function photoUrl(photo: Photo, kind: 'thumb' | 'full' = 'thumb') {
+export function photoUrl(photo: StoredPhoto, kind: 'thumb' | 'full' = 'thumb') {
   const key = `${photo.id}:${kind}`
   let url = urlCache.get(key)
   if (!url) {
