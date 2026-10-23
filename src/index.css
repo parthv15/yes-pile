@@ -32,6 +32,11 @@ body {
 }
 
 .app-shell {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Inside a decision, its tabs sit along the bottom on phones. */
+.app-shell.has-tab-bar {
   padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
 }
 
@@ -53,7 +58,8 @@ button:focus-visible, a:focus-visible {
 }
 
 @media (min-width: 640px) {
-  .app-shell {
+  .app-shell,
+  .app-shell.has-tab-bar {
     padding-bottom: env(safe-area-inset-bottom);
   }
 

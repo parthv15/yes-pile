@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { allLabels, db, groupsOf, makeTheOne, photoUrl, type Group, type Photo } from '../db'
+import { allLabels, groupsOf, makeTheOne, photoUrl, updateVerdicts, type Group, type Photo } from '../db'
+import { useDecision } from '../decision'
+import { routeToHash } from '../route'
 import { exportYesPile } from '../exportZip'
 import PhotoCard from '../components/PhotoCard'
 import PhotoModal from '../components/PhotoModal'
@@ -14,6 +16,7 @@ interface Props {
 export default function YesView({ photos, groups, goTo }: Props) {
   const [openId, setOpenId] = useState<number | null>(null)
   const [exporting, setExporting] = useState(false)
+  const { board, decision } = useDecision()
 
   const theOne = photos.find((p) => p.theOne)
   const yes = photos.filter((p) => p.yes && !p.theOne).sort((a, b) => a.addedAt - b.addedAt)
@@ -56,7 +59,8 @@ export default function YesView({ photos, groups, goTo }: Props) {
               className="max-h-[45dvh] md:max-h-[70vh] max-w-full cursor-pointer justify-self-center rounded-3xl shadow-2xl"
             />
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-500">This is</p>
+              <p className="text-sm font-medium text-stone-500">{decision.name}</p>
+              <p className="mt-1 text-sm font-semibold uppercase tracking-[0.3em] text-rose-500">This is</p>
               <h2 className="mt-2 font-display text-5xl sm:text-7xl font-bold">THE ONE.</h2>
               {theOne.batchName && <p className="mt-3 break-words text-sm text-stone-600">Upload: {theOne.batchName}</p>}
               <div className="mt-6 flex flex-wrap gap-2">
@@ -73,6 +77,13 @@ export default function YesView({ photos, groups, goTo }: Props) {
               </div>
               {theOne.note && <p className="mt-4 whitespace-pre-wrap text-stone-600">{theOne.note}</p>}
               <p className="mt-6 text-sm text-stone-400">{theOne.name}</p>
+              <a
+                href={routeToHash({ page: 'board', boardId: board.id })}
+                className="mt-8 inline-flex max-w-full items-center gap-2 rounded-full bg-stone-900 px-5 py-3 font-medium text-white hover:bg-stone-700"
+              >
+                <span className="truncate">On to the next decision in {board.name}</span>
+                <span aria-hidden="true">→</span>
+              </a>
             </div>
           </div>
         ) : (
@@ -103,13 +114,13 @@ export default function YesView({ photos, groups, goTo }: Props) {
                 <PhotoCard photo={p} groups={groupsOf(p, groups)} onOpen={() => setOpenId(p.id)} />
                 <div className="yes-actions mt-2 flex flex-col gap-2 sm:absolute sm:inset-x-2 sm:top-10 sm:mt-0 sm:gap-1 sm:opacity-0 sm:transition sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                   <button
-                    onClick={() => makeTheOne(p.id)}
+                    onClick={() => makeTheOne(decision.id, p.id)}
                     className="rounded-full bg-rose-500 py-1.5 text-sm font-semibold text-white shadow hover:bg-rose-600"
                   >
                     Make THE ONE
                   </button>
                   <button
-                    onClick={() => db.photos.update(p.id, { yes: false })}
+                    onClick={() => updateVerdicts(decision.id, [p.id], { yes: false })}
                     className="rounded-full bg-white/90 py-1.5 text-sm shadow hover:bg-white"
                   >
                     Remove from pile

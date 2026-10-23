@@ -3,6 +3,7 @@ import { allLabels, bringBack, deletePhotos, groupsOf, passedPhotos, type Group,
 import PhotoCard from '../components/PhotoCard'
 import PhotoModal from '../components/PhotoModal'
 import type { Tab } from '../App'
+import { useDecision } from '../decision'
 
 interface Props {
   photos: Photo[]
@@ -12,6 +13,7 @@ interface Props {
 
 export default function PassedView({ photos, groups, goTo }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const { board, decision } = useDecision()
   const [openId, setOpenId] = useState<number | null>(null)
 
   const passed = passedPhotos(photos)
@@ -30,18 +32,18 @@ export default function PassedView({ photos, groups, goTo }: Props) {
     })
 
   async function bringBackSelected() {
-    await bringBack([...selected])
+    await bringBack(decision.id, [...selected])
     setSelected(new Set())
   }
 
   async function deleteSelected() {
-    if (!confirm(`Delete ${selected.size} photo${selected.size === 1 ? '' : 's'} for good?`)) return
+    if (!confirm(`Delete ${selected.size} photo${selected.size === 1 ? '' : 's'} for good? ${selected.size === 1 ? 'It' : 'They'}'ll be gone from every decision in ${board.name}.`)) return
     await deletePhotos([...selected])
     setSelected(new Set())
   }
 
   async function deleteAll() {
-    if (!confirm(`Delete all ${passed.length} passed photos for good? You won't be able to bring them back.`)) return
+    if (!confirm(`Delete all ${passed.length} passed photos for good? They'll be gone from every decision in ${board.name}, and you won't be able to bring them back.`)) return
     await deletePhotos(passed.map((p) => p.id))
   }
 
@@ -105,7 +107,7 @@ export default function PassedView({ photos, groups, goTo }: Props) {
                     onToggleSelect={() => toggle(p.id)}
                   />
                   <button
-                    onClick={() => bringBack([p.id])}
+                    onClick={() => bringBack(decision.id, [p.id])}
                     className="card-actions mt-2 w-full rounded-full border border-stone-300 bg-white py-1.5 text-sm font-medium shadow hover:bg-stone-50 sm:absolute sm:inset-x-2 sm:top-10 sm:mt-0 sm:w-auto sm:border-0 sm:bg-white/90 sm:opacity-0 sm:transition sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:hover:bg-white"
                   >
                     ↩ Bring back

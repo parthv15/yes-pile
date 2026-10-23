@@ -21,6 +21,7 @@ export interface ImportResult {
 }
 
 export async function importPhotos(
+  boardId: number,
   files: File[],
   onProgress: (done: number, total: number) => void,
   batchName = '',
@@ -34,20 +35,15 @@ export async function importPhotos(
     try {
       const thumb = await makeThumb(file)
       await db.photos.add({
+        boardId,
         name: file.name,
         blob: file,
         thumb,
         addedAt: Date.now() + i,
         batchId,
         ...(name ? { batchName: name } : {}),
-        level: 0,
-        out: false,
-        outRound: 0,
-        groupIds: [],
         labels: [],
         note: '',
-        yes: false,
-        theOne: false,
       })
       added++
     } catch {

@@ -4,14 +4,18 @@ import {
   allLabels,
   createGroup,
   db,
+  deleteGroup as removeGroup,
   deletePhotos,
   groupsOf,
   likedPhotos,
   passPhotos,
   removeFromGroup,
+  updateVerdicts,
   type Group,
   type Photo,
+  type VerdictState,
 } from '../db'
+import { useDecision } from '../decision'
 import PhotoCard from '../components/PhotoCard'
 import PhotoModal from '../components/PhotoModal'
 
@@ -29,6 +33,7 @@ export default function PileView({ photos, groups }: Props) {
   const [openId, setOpenId] = useState<number | null>(null)
   const [dropTarget, setDropTarget] = useState<number | null>(null)
   const [bulkLabel, setBulkLabel] = useState('')
+  const { board, decision } = useDecision()
 
   const labels = allLabels(photos)
   const liked = likedPhotos(photos)
@@ -52,13 +57,13 @@ export default function PileView({ photos, groups }: Props) {
       return next
     })
 
-  async function bulk(changes: Partial<Photo>) {
-    await db.photos.where('id').anyOf([...selected]).modify(changes)
+  async function bulk(changes: Partial<VerdictState>) {
+    await updateVerdicts(decision.id, [...selected], changes)
     setSelected(new Set())
   }
 
   async function deleteSelected() {
-    if (!confirm(`Delete ${selected.size} photo${selected.size === 1 ? '' : 's'} for good?`)) return
+    if (!confirm(`Delete ${selected.size} photo${selected.size === 1 ? '' : 's'} for good? ${selected.size === 1 ? 'It' : 'They'}'ll be gone from every decision in ${board.name}.`)) return
     await deletePhotos([...selected])
     setSelected(new Set())
   }
@@ -78,9 +83,9 @@ export default function PileView({ photos, groups }: Props) {
   async function newGroup() {
     const name = prompt('Name the new group (e.g. "Florals" or "Studio Aurora")')?.trim()
     if (!name) return
-    const id = await createGroup(name)
+    const id = await createGroup(decision.id, name)
     if (selected.size) {
-      await addToGroup([...selected], id)
+      await addToGroup(decision.id, [...selected], id)
       setSelected(new Set())
     }
   }
@@ -92,8 +97,7 @@ export default function PileView({ photos, groups }: Props) {
 
   async function deleteGroup(g: Group) {
     if (!confirm(`Delete the group "${g.name}"? Its photos stay, just not in this group.`)) return
-    await removeFromGroup(photos.filter((p) => p.groupIds.includes(g.id)).map((p) => p.id), g.id)
-    await db.groups.delete(g.id)
+    await removeGroup(g)
   }
 
   function dragStart(e: React.DragEvent, photo: Photo) {
@@ -120,8 +124,8 @@ export default function PileView({ photos, groups }: Props) {
         const ids: number[] = JSON.parse(data)
         // Dropping on a group adds it there (it stays in its other groups too).
         // Dropping on "Not grouped" takes it out of every group.
-        if (sectionId === UNGROUPED) db.photos.where('id').anyOf(ids).modify({ groupIds: [] })
-        else addToGroup(ids, sectionId)
+        if (sectionId === UNGROUPED) updateVerdicts(decision.id, ids, { groupIds: [] })
+        else addToGroup(decision.id, ids, sectionId)
       },
     }
   }
@@ -149,7 +153,7 @@ export default function PileView({ photos, groups }: Props) {
                 else if (action === 'none') bulk({ groupIds: [] })
                 else {
                   const run = action === 'add' ? addToGroup : removeFromGroup
-                  run([...selected], Number(id)).then(() => setSelected(new Set()))
+                  run(decision.id, [...selected], Number(id)).then(() => setSelected(new Set()))
                 }
               }}
               className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm"
@@ -199,7 +203,7 @@ export default function PileView({ photos, groups }: Props) {
               Add to Yes Pile
             </button>
             <button
-              onClick={() => passPhotos([...selected]).then(() => setSelected(new Set()))}
+              onClick={() => passPhotos(decision, [...selected]).then(() => setSelected(new Set()))}
               className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm hover:bg-stone-100"
             >
               Pass
@@ -273,7 +277,7 @@ export default function PileView({ photos, groups }: Props) {
                       key={p.id}
                       photo={p}
                       groups={groupsOf(p, groups).filter((g) => g.id !== id)}
-                      onRemoveFromGroup={group ? () => removeFromGroup([p.id], group.id) : undefined}
+                      onRemoveFromGroup={group ? () => removeFromGroup(decision.id, [p.id], group.id) : undefined}
                       selected={selected.has(p.id)}
                       onOpen={() => setOpenId(p.id)}
                       onToggleSelect={() => toggle(p.id)}
